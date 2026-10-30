@@ -1,0 +1,544 @@
+import os
+import json
+import datetime
+from modelos.estudiante import Estudiante
+from modelos.responsable import Responsable
+from modelos.solicitud import Solicitud
+from archivo_json import ArchivoJSON
+
+
+# Clase principal del sistema
+class GestorSolicitudes:
+
+    def __init__(self):
+        self.lst = []   # solicitudes
+        self.ests = []  # estudiantes
+        self.resp = []  # responsables
+        self.archivo = ArchivoJSON()
+        self.fin = False
+
+    def iniciar(self):
+        self.cargar()
+        flag = True
+        while flag:
+            self.mostrar_menu()
+            op = self.leer("Opcion: ")
+            if self.fin:
+                print("")
+                op = "0"
+            flag = self.procesar_opcion(op)
+            print("")
+
+    def mostrar_menu(self):
+        print("==============================================")
+        print(" SISTEMA DE GESTION DE SOLICITUDES ACADEMICAS")
+        print("==============================================")
+        print("1. Registrar solicitud")
+        print("2. Cambiar estado de una solicitud")
+        print("3. Asignar responsable")
+        print("4. Buscar / filtrar solicitudes")
+        print("5. Reporte basico")
+        print("6. Listar todas las solicitudes")
+        print("0. Salir")
+
+    # lee una linea de la consola
+    def leer(self, msg):
+        try:
+            return input(msg).strip()
+        except EOFError:
+            self.fin = True
+            return ""
+
+    def procesar_opcion(self, op):
+        if op == "1":
+            self.registrar()
+        elif op == "2":
+            print("--- Cambiar estado ---")
+            id = self.leer("ID de la solicitud: ")
+            s = self.buscar(id)
+            if s == None:
+                print("Error: no existe una solicitud con ID " + id + ".")
+                return True
+            print("Estado actual: " + s.get_estado())
+            nuevo = self.leer("Nuevo estado (PENDIENTE, EN_REVISION, APROBADA, RECHAZADA, CERRADA): ")
+            nuevo = nuevo.upper().replace(" ", "_")
+            anterior = s.get_estado()
+            r = self.cambiar_estado(id, nuevo)
+            if r == 1:
+                print("Estado actualizado: " + anterior + " -> " + nuevo)
+            elif r == 0:
+                print("La solicitud ya se encuentra en estado " + nuevo + ".")
+            elif r == -2:
+                print("Error: no se puede pasar de " + anterior + " a " + nuevo + ".")
+            elif r == -3:
+                print("Error: estado invalido.")
+            else:
+                print("Error: no existe una solicitud con ID " + id + ".")
+        elif op == "3":
+            print("--- Asignar responsable ---")
+            id2 = self.leer("ID de la solicitud: ")
+            s2 = self.buscar(id2)
+            if s2 == None:
+                print("Error: no existe una solicitud con ID " + id2 + ".")
+                return True
+            print("Responsables disponibles:")
+            for i in range(len(self.resp)):
+                print("  " + str(self.resp[i].id) + " - " + self.resp[i].nombre + " (" + self.resp[i].area + ")")
+            idr = self.leer("ID del responsable: ")
+            res = self.asignar_responsable(id2, idr)
+            if res == 1:
+                rr = s2.get_responsable()
+                print("Responsable asignado: " + rr.nombre + " (" + rr.area + ") -> solicitud #" + str(s2.id))
+            elif res == -2:
+                print("Error: no existe un responsable con ID " + idr + ".")
+            elif res == -3:
+                print("Error: no se puede asignar responsable a una solicitud CERRADA.")
+            else:
+                print("Error: no se pudo asignar el responsable.")
+        elif op == "4":
+            print("--- Buscar / filtrar solicitudes ---")
+            print("Filtrar por:")
+            print("  1. Estado")
+            print("  2. Tipo")
+            print("  3. Prioridad")
+            print("  4. Legajo")
+            f = self.leer("Opcion: ")
+            aux = None
+            if f == "1":
+                v = self.leer("Estado (PENDIENTE, EN_REVISION, APROBADA, RECHAZADA, CERRADA): ")
+                aux = self.filtrar_por_estado(v)
+            elif f == "2":
+                v = self.leer("Tipo (CERTIFICADO, CAMBIO_COMISION, REVISION_NOTA, EQUIVALENCIA, OTRO): ")
+                aux = self.filtrar_por_tipo(v)
+            elif f == "3":
+                v = self.leer("Prioridad (ALTA, MEDIA, BAJA): ")
+                aux = self.filtrar_por_prioridad(v)
+            elif f == "4":
+                v = self.leer("Legajo: ")
+                aux = self.filtrar_por_legajo(v)
+            else:
+                print("Opcion invalida.")
+                return True
+            if len(aux) == 0:
+                print("No se encontraron solicitudes.")
+            else:
+                print("Se encontraron " + str(len(aux)) + " solicitud(es):")
+                print("")
+                for i in range(len(aux)):
+                    self.mostrar(aux[i])
+        elif op == "5":
+            self.reporte()
+        elif op == "6":
+            print("--- Listado de solicitudes ---")
+            if len(self.lst) == 0:
+                print("No hay solicitudes registradas.")
+                return True
+            print("")
+            for i in range(len(self.lst)):
+                self.mostrar(self.lst[i])
+            print("Total: " + str(len(self.lst)) + " solicitud(es).")
+        elif op == "0":
+            print("Saliendo del sistema...")
+            return False
+        else:
+            print("Opcion invalida.")
+        return True
+
+    # registra una nueva solicitud pidiendo los datos por consola
+    def registrar(self):
+        print("--- Registrar solicitud ---")
+        legajo = self.leer("Legajo del estudiante: ")
+        if legajo == "":
+            print("Error: el legajo es obligatorio.")
+            return
+        if not legajo.isdigit():
+            print("Error: el legajo debe ser numerico.")
+            return
+        nombre = ""
+        apellido = ""
+        email = ""
+        carrera = ""
+        flag = False
+        # busca el estudiante
+        for i in range(len(self.ests)):
+            if self.ests[i].legajo == legajo:
+                flag = True
+                nombre = self.ests[i].nombre
+                apellido = self.ests[i].apellido
+                email = self.ests[i].email
+                carrera = self.ests[i].carrera
+        if flag:
+            print("Estudiante encontrado: " + apellido + ", " + nombre + " (" + carrera + ")")
+        else:
+            print("El estudiante no esta registrado. Ingrese sus datos.")
+            nombre = self.leer("Nombre: ")
+            apellido = self.leer("Apellido: ")
+            if nombre == "" or apellido == "":
+                print("Error: nombre y apellido son obligatorios.")
+                return
+            email = self.leer("Email: ")
+            if email.find("@") == -1:
+                print("Error: email invalido.")
+                return
+            carrera = self.leer("Carrera: ")
+        print("Tipos de solicitud:")
+        print("  1. CERTIFICADO")
+        print("  2. CAMBIO_COMISION")
+        print("  3. REVISION_NOTA")
+        print("  4. EQUIVALENCIA")
+        print("  5. OTRO")
+        op = self.leer("Tipo: ")
+        tipo = ""
+        if op == "1":
+            tipo = "CERTIFICADO"
+        elif op == "2":
+            tipo = "CAMBIO_COMISION"
+        elif op == "3":
+            tipo = "REVISION_NOTA"
+        elif op == "4":
+            tipo = "EQUIVALENCIA"
+        elif op == "5":
+            tipo = "OTRO"
+        else:
+            print("Error: tipo invalido.")
+            return
+        descripcion = self.leer("Descripcion: ")
+        if len(descripcion) == 0:
+            print("Error: la descripcion no puede estar vacia.")
+            return
+        pd = self.prioridad_por_defecto(tipo)
+        prioridad = self.leer("Prioridad (ALTA/MEDIA/BAJA) [Enter = " + pd + "]: ")
+        prioridad = prioridad.upper()
+        if prioridad == "":
+            prioridad = pd
+        elif prioridad != "ALTA" and prioridad != "MEDIA" and prioridad != "BAJA":
+            print("Prioridad invalida, se usa la prioridad por defecto: " + pd)
+            prioridad = pd
+        fecha = self.hoy()
+        id = self.registrar_solicitud(legajo, nombre, apellido, email, carrera, tipo, descripcion, prioridad, fecha)
+        if id == -1:
+            print("Error: no se pudo guardar la solicitud.")
+            return
+        print("")
+        print("Solicitud #" + str(id) + " registrada correctamente.")
+        print("  Estudiante: " + legajo + " - " + apellido + ", " + nombre)
+        print("  Tipo: " + tipo)
+        print("  Prioridad: " + prioridad)
+        print("  Estado: PENDIENTE")
+        print("  Fecha: " + fecha)
+
+    def registrar_solicitud(self, legajo, nombre, apellido, email, carrera, tipo, descripcion, prioridad, fecha):
+        est = None
+        for i in range(len(self.ests)):
+            if self.ests[i].legajo == legajo:
+                est = self.ests[i]
+        if est == None:
+            est = Estudiante(legajo, nombre, apellido, email, carrera)
+            self.ests.append(est)
+        # calcula el proximo id
+        aux = 0
+        for i in range(len(self.lst)):
+            if self.lst[i].id > aux:
+                aux = self.lst[i].id
+        s = Solicitud(aux + 1, est, tipo, descripcion, prioridad, "PENDIENTE", None, fecha, fecha)
+        self.lst.append(s)
+        if not self.guardar():
+            return -1
+        return s.id
+
+    def prioridad_por_defecto(self, tipo):
+        if tipo == "CERTIFICADO":
+            return "BAJA"
+        elif tipo == "CAMBIO_COMISION":
+            return "ALTA"
+        elif tipo == "REVISION_NOTA":
+            return "ALTA"
+        elif tipo == "EQUIVALENCIA":
+            return "MEDIA"
+        elif tipo == "OTRO":
+            return "BAJA"
+        return "BAJA"
+
+    # devuelve True si se pudo cambiar el estado
+    def cambiar_estado(self, id, nuevo):
+        s = self.buscar(id)
+        if s == None:
+            return -1
+        if nuevo != "PENDIENTE" and nuevo != "EN_REVISION" and nuevo != "APROBADA" and nuevo != "RECHAZADA" and nuevo != "CERRADA":
+            return -3
+        actual = s.get_estado()
+        if actual == nuevo:
+            return 0
+        if actual == "CERRADA":
+            return -2
+        elif actual == "APROBADA":
+            if nuevo != "CERRADA":
+                return -2
+        elif actual == "RECHAZADA":
+            if nuevo != "CERRADA":
+                return -2
+        elif actual == "PENDIENTE":
+            # desde pendiente puede pasar a cualquier estado
+            pass
+        elif actual == "EN_REVISION":
+            if nuevo == "PENDIENTE":
+                # se permite volver a pendiente
+                pass
+        s.set_estado(nuevo)
+        s.set_fecha_modificacion(self.hoy())
+        self.guardar()
+        return 1
+
+    def asignar_responsable(self, id_solicitud, id_responsable):
+        s = self.buscar(id_solicitud)
+        if s == None:
+            return -1
+        x = None
+        for i in range(len(self.resp)):
+            if str(self.resp[i].id) == id_responsable:
+                x = self.resp[i]
+        if x == None:
+            return -2
+        if s.estado == "CERRADA":
+            return -3
+        s.set_responsable(x)
+        s.set_fecha_modificacion(self.hoy())
+        self.guardar()
+        return 1
+
+    def buscar(self, id):
+        try:
+            n = int(id)
+        except:
+            return None
+        for i in range(len(self.lst)):
+            if self.lst[i].id == n:
+                return self.lst[i]
+        return None
+
+    def filtrar_por_estado(self, x):
+        res = []
+        x = x.upper().strip().replace(" ", "_")
+        for i in range(len(self.lst)):
+            if self.lst[i].estado.upper() == x:
+                res.append(self.lst[i])
+        return res
+
+    def filtrar_por_tipo(self, x):
+        res = []
+        x = x.upper().strip().replace(" ", "_")
+        for i in range(len(self.lst)):
+            if self.lst[i].tipo.upper() == x:
+                res.append(self.lst[i])
+        return res
+
+    def filtrar_por_prioridad(self, x):
+        res = []
+        x = x.upper().strip()
+        for i in range(len(self.lst)):
+            if self.lst[i].prioridad.upper() == x:
+                res.append(self.lst[i])
+        return res
+
+    def filtrar_por_legajo(self, x):
+        res = []
+        x = x.strip()
+        for i in range(len(self.lst)):
+            if self.lst[i].estudiante.legajo == x:
+                res.append(self.lst[i])
+        return res
+
+    def mostrar(self, s):
+        r = "Sin asignar"
+        if s.responsable != None:
+            r = s.responsable.nombre + " (" + s.responsable.area + ")"
+        dias = self.dias_desde_creacion(s)
+        venc = ""
+        if self.esta_vencida(s):
+            venc = " (VENCIDA)"
+        print("#" + str(s.id) + " [" + s.estado + "] " + s.tipo + " - Prioridad: " + s.prioridad)
+        print("   Estudiante: " + s.estudiante.legajo + " - " + s.estudiante.apellido + ", " + s.estudiante.nombre)
+        print("   Descripcion: " + s.descripcion)
+        print("   Responsable: " + r)
+        print("   Creada: " + s.fecha_creacion + " | Modificada: " + s.fecha_modificacion + " | Dias: " + str(dias) + venc)
+        print("")
+
+    def reporte(self):
+        c1 = c2 = c3 = c4 = c5 = 0
+        t1 = t2 = t3 = t4 = t5 = 0
+        pa = 0
+        v = 0
+        # recorre la lista
+        for i in range(len(self.lst)):
+            x = self.lst[i]
+            if x.estado == "PENDIENTE":
+                c1 += 1
+            elif x.estado == "EN_REVISION":
+                c2 += 1
+            elif x.estado == "APROBADA":
+                c3 += 1
+            elif x.estado == "RECHAZADA":
+                c4 += 1
+            elif x.estado == "CERRADA":
+                c5 += 1
+            if x.tipo == "CERTIFICADO":
+                t1 += 1
+            elif x.tipo == "CAMBIO_COMISION":
+                t2 += 1
+            elif x.tipo == "REVISION_NOTA":
+                t3 += 1
+            elif x.tipo == "EQUIVALENCIA":
+                t4 += 1
+            elif x.tipo == "OTRO":
+                t5 += 1
+            if x.estado[0:4] == "PEND" and x.prioridad.upper() == "ALTA":
+                pa += 1
+            if self.esta_vencida(x):
+                v += 1
+        print("============ REPORTE ============")
+        print("Total de solicitudes: " + str(len(self.lst)))
+        print("")
+        print("Cantidad por estado:")
+        print("  PENDIENTE: " + str(c1))
+        print("  EN_REVISION: " + str(c2))
+        print("  APROBADA: " + str(c3))
+        print("  RECHAZADA: " + str(c4))
+        print("  CERRADA: " + str(c5))
+        print("")
+        print("Cantidad por tipo:")
+        print("  CERTIFICADO: " + str(t1))
+        print("  CAMBIO_COMISION: " + str(t2))
+        print("  REVISION_NOTA: " + str(t3))
+        print("  EQUIVALENCIA: " + str(t4))
+        print("  OTRO: " + str(t5))
+        print("")
+        print("Pendientes de prioridad ALTA: " + str(pa))
+        print("Solicitudes vencidas: " + str(v))
+        print("=================================")
+
+    def dias_desde_creacion(self, s):
+        p = s.get_fecha_creacion().split("-")
+        h = self.hoy().split("-")
+        f1 = datetime.date(int(p[0]), int(p[1]), int(p[2]))
+        f2 = datetime.date(int(h[0]), int(h[1]), int(h[2]))
+        return (f2 - f1).days
+
+    def esta_vencida(self, s):
+        if s.estado != "PENDIENTE" and s.estado != "EN_REVISION":
+            return False
+        d = self.dias_desde_creacion(s)
+        if s.prioridad == "ALTA" and d > 3:
+            return True
+        if s.prioridad == "MEDIA" and d > 7:
+            return True
+        if s.prioridad == "BAJA" and d > 15:
+            return True
+        return False
+
+    def hoy(self):
+        if os.environ.get("FECHA_HOY"):
+            return os.environ.get("FECHA_HOY")
+        return datetime.date.today().strftime("%Y-%m-%d")
+
+    def validar_email(self, email):
+        if email == None or email == "":
+            return False
+        partes = email.split("@")
+        if len(partes) != 2:
+            return False
+        if partes[1].find(".") == -1:
+            return False
+        return True
+
+    # exporta las solicitudes a un csv para mandarle a alumnado
+    def exportar_csv(self, ruta):
+        txt = "id;legajo;tipo;prioridad;estado;fecha\n"
+        for i in range(len(self.lst)):
+            x = self.lst[i]
+            txt += str(x.id) + ";" + x.estudiante.legajo + ";" + x.tipo + ";" + x.prioridad + ";" + x.estado + ";" + x.fecha_creacion + "\n"
+        try:
+            f = open(ruta, "w")
+            f.write(txt)
+            f.close()
+        except:
+            pass
+
+    def cargar(self):
+        data2 = None
+        txt = self.archivo.leer()
+        if txt != None:
+            try:
+                data2 = json.loads(txt)
+            except:
+                pass
+        if data2 == None:
+            data2 = self.datos_ejemplo()
+            self.proc(data2)
+            self.guardar()
+        else:
+            self.proc(data2)
+
+    # procesa los datos
+    def proc(self, data2):
+        self.ests = []
+        self.resp = []
+        self.lst = []
+        for e in data2["estudiantes"]:
+            self.ests.append(Estudiante(e["legajo"], e["nombre"], e["apellido"], e["email"], e["carrera"]))
+        for r in data2["responsables"]:
+            self.resp.append(Responsable(r["id"], r["nombre"], r["area"]))
+        for x in data2["solicitudes"]:
+            # a veces el estado viene en minuscula
+            est = x["estado"]
+            if est == "pendiente" or est == "Pendiente": est = "PENDIENTE"
+            if est == "en revision" or est == "En revision" or est == "en_revision": est = "EN_REVISION"
+            if est == "aprobada" or est == "Aprobada": est = "APROBADA"
+            if est == "rechazada" or est == "Rechazada": est = "RECHAZADA"
+            if est == "cerrada" or est == "Cerrada": est = "CERRADA"
+            pri = x["prioridad"]
+            if pri == "alta" or pri == "Alta": pri = "ALTA"
+            if pri == "media" or pri == "Media": pri = "MEDIA"
+            if pri == "baja" or pri == "Baja": pri = "BAJA"
+            e = x["estudiante"]
+            aux = Estudiante(e["legajo"], e["nombre"], e["apellido"], e["email"], e["carrera"])
+            rr = None
+            if x["responsable"] != None:
+                rr = Responsable(x["responsable"]["id"], x["responsable"]["nombre"], x["responsable"]["area"])
+            self.lst.append(Solicitud(x["id"], aux, x["tipo"], x["descripcion"], pri, est, rr, x["fecha_creacion"], x["fecha_modificacion"]))
+
+    # guarda los datos en la base de datos
+    def guardar(self):
+        data2 = {
+            "estudiantes": self.ests,
+            "responsables": self.resp,
+            "solicitudes": self.lst
+        }
+        txt = json.dumps(data2, default=lambda o: o.__dict__, indent=2, ensure_ascii=False)
+        return self.archivo.escribir(txt + "\n")
+
+    def datos_ejemplo(self):
+        e = [
+            {"legajo": "10001", "nombre": "Lucia", "apellido": "Benitez", "email": "lucia.benitez@alumnos.ejemplo.edu", "carrera": "Tecnicatura Universitaria en Programacion"},
+            {"legajo": "10002", "nombre": "Tomas", "apellido": "Aguirre", "email": "tomas.aguirre@alumnos.ejemplo.edu", "carrera": "Tecnicatura Universitaria en Programacion"},
+            {"legajo": "10003", "nombre": "Camila", "apellido": "Rios", "email": "camila.rios@alumnos.ejemplo.edu", "carrera": "Ingenieria en Sistemas de Informacion"},
+            {"legajo": "10004", "nombre": "Joaquin", "apellido": "Medina", "email": "joaquin.medina@alumnos.ejemplo.edu", "carrera": "Tecnicatura Universitaria en Programacion"},
+            {"legajo": "10005", "nombre": "Sofia", "apellido": "Navarro", "email": "sofia.navarro@alumnos.ejemplo.edu", "carrera": "Ingenieria en Sistemas de Informacion"}
+        ]
+        r = [
+            {"id": 1, "nombre": "Laura Quiroga", "area": "Alumnado"},
+            {"id": 2, "nombre": "Martin Ferreyra", "area": "Secretaria Academica"},
+            {"id": 3, "nombre": "Paula Dominguez", "area": "Bedelia"}
+        ]
+        s = [
+            {"id": 1, "estudiante": e[0], "tipo": "CERTIFICADO", "descripcion": "Certificado de alumno regular para presentar en el trabajo", "prioridad": "BAJA", "estado": "PENDIENTE", "responsable": None, "fecha_creacion": "2026-10-20", "fecha_modificacion": "2026-10-20"},
+            {"id": 2, "estudiante": e[1], "tipo": "CAMBIO_COMISION", "descripcion": "Cambio de comision de Programacion II por superposicion horaria", "prioridad": "ALTA", "estado": "EN_REVISION", "responsable": r[1], "fecha_creacion": "2026-10-22", "fecha_modificacion": "2026-10-24"},
+            {"id": 3, "estudiante": e[2], "tipo": "REVISION_NOTA", "descripcion": "Revision de nota del segundo parcial de Matematica", "prioridad": "ALTA", "estado": "pendiente", "responsable": None, "fecha_creacion": "2026-10-28", "fecha_modificacion": "2026-10-28"},
+            {"id": 4, "estudiante": e[3], "tipo": "EQUIVALENCIA", "descripcion": "Equivalencia de Algebra aprobada en otra universidad", "prioridad": "MEDIA", "estado": "APROBADA", "responsable": r[1], "fecha_creacion": "2026-09-15", "fecha_modificacion": "2026-10-05"},
+            {"id": 5, "estudiante": e[4], "tipo": "CERTIFICADO", "descripcion": "Certificado analitico parcial", "prioridad": "BAJA", "estado": "CERRADA", "responsable": r[0], "fecha_creacion": "2026-09-01", "fecha_modificacion": "2026-09-10"},
+            {"id": 6, "estudiante": e[0], "tipo": "REVISION_NOTA", "descripcion": "Revision de nota del trabajo practico de Bases de Datos", "prioridad": "Alta", "estado": "PENDIENTE", "responsable": None, "fecha_creacion": "2026-10-21", "fecha_modificacion": "2026-10-21"},
+            {"id": 7, "estudiante": e[1], "tipo": "OTRO", "descripcion": "Constancia de examen para presentar en el trabajo", "prioridad": "BAJA", "estado": "RECHAZADA", "responsable": r[2], "fecha_creacion": "2026-10-01", "fecha_modificacion": "2026-10-03"},
+            {"id": 8, "estudiante": e[2], "tipo": "CAMBIO_COMISION", "descripcion": "Cambio de comision de Ingles I al turno noche", "prioridad": "ALTA", "estado": "PENDIENTE", "responsable": r[2], "fecha_creacion": "2026-10-29", "fecha_modificacion": "2026-10-29"},
+            {"id": 9, "estudiante": e[3], "tipo": "EQUIVALENCIA", "descripcion": "Equivalencia de Programacion I por titulo terciario", "prioridad": "MEDIA", "estado": "EN_REVISION", "responsable": r[1], "fecha_creacion": "2026-10-10", "fecha_modificacion": "2026-10-15"},
+            {"id": 10, "estudiante": e[4], "tipo": "CERTIFICADO", "descripcion": "Certificado de examen final rendido", "prioridad": "media", "estado": "PENDIENTE", "responsable": None, "fecha_creacion": "2026-10-26", "fecha_modificacion": "2026-10-26"}
+        ]
+        return {"estudiantes": e, "responsables": r, "solicitudes": s}
