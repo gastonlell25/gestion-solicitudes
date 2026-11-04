@@ -5,6 +5,7 @@
 | S03 | Malos nombres | Variables `x`, `lst`, `aux` y método `proc()` que no dicen qué contienen ni qué hacen. Ver `codigo_gaston_S03.png` | `GestorSolicitudes.java` → `proc()` l. 150; `lst` l. 45; `x` l. 62 | Hay que leer todo el código para entender qué representa cada nombre | Alto riesgo de confundir variables al modificar el código | Media | Clean Code: nombres que revelan intención | Rename | Gaston |
 | S07 | Duplicación de filtros | `filtrar_por_estado`, `filtrar_por_tipo`, `filtrar_por_prioridad` y `filtrar_por_legajo` repiten el recorrido y la selección de resultados. | `src/gestor_solicitudes.py:319–349` | Se repite la misma estructura de filtrado en cuatro métodos. | Cambiar el recorrido o añadir otro criterio obliga a revisar varios bloques y puede introducir diferencias. | Media | DRY; Clean Code; cohesión | Extraer una función común de filtrado y conservar las operaciones públicas | Juan |
 | S08 | Feature Envy | `dias_desde_creacion(s)` y `esta_vencida(s)` calculan reglas a partir de atributos de `Solicitud`. | `src/gestor_solicitudes.py:419–436`; `src/modelos/solicitud.py` | El gestor conoce demasiados detalles de la solicitud, además de coordinar la interacción. | Cambiar el cálculo de antigüedad o vencimiento obliga a tocar el gestor. | Alta | SRP; cohesión; encapsulación | Move Method a `Solicitud`, con fecha de referencia explícita | Juan |
+| S09 | Data Class / modelo anémico | `Solicitud` almacena datos y contiene getters/setters, mientras las reglas sobre vencimiento permanecen en el gestor. | `src/modelos/solicitud.py:3–55` y `src/gestor_solicitudes.py:419–436` | La entidad contiene poco comportamiento asociado a los datos que representa. | Al incorporar nuevas reglas, la lógica puede seguir acumulándose en el gestor. | Media | Cohesión; SRP | Incorporar únicamente comportamiento propio de `Solicitud`, sin incluir persistencia ni consola | Juan |
 
 
 
@@ -22,3 +23,6 @@
 
 ### S08 - Feature Envy (Juan)
 ![S08 - Vencimientos en el gestor](evidencias/antes/codigo_juan_S08.png)
+
+### S09 - Data Class (Juan)
+![S09 - Modelo Solicitud](evidencias/antes/codigo_juan_S09.png)

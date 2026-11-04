@@ -26,3 +26,8 @@
 - **Evidencia:** `dias_desde_creacion` y `esta_vencida` concentran en el gestor reglas que dependen de atributos de `Solicitud`.
 - **Decisión propuesta:** aplicar Move Method y delegar el cálculo al modelo, pasando la fecha de referencia para que sea comprobable con tests.
 - **Verificación prevista:** comparar los valores de antigüedad y vencimiento para fechas y prioridades iguales antes y después.
+
+### S09 - Data Class
+- **Evidencia:** `Solicitud` contiene mayormente atributos y métodos de acceso, mientras su antigüedad y vencimiento se calculan fuera.
+- **Decisión propuesta:** acercar las reglas propias de una solicitud al modelo sin mezclar allí persistencia, presentación ni lógica de otros actores.
+- **Verificación prevista:** conservar los valores observables de la entidad y superar las pruebas de caracterización.
