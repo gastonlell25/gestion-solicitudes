@@ -40,3 +40,16 @@ def copiar_datos(tmp_path: Path) -> Path:
 def leer_solicitud(archivo_datos: Path, id_solicitud: int) -> dict:
     datos = json.loads(archivo_datos.read_text(encoding="utf-8"))
     return next(s for s in datos["solicitudes"] if s["id"] == id_solicitud)
+
+
+def test_asignar_responsable_valido_asigna_y_guarda(tmp_path):
+    """T16: asignar a la solicitud #1 el responsable 1 (Alumnado)."""
+    # Arrange
+    archivo = copiar_datos(tmp_path)
+
+    # Act
+    salida = ejecutar_sistema(["3", "1", "1", "0"], archivo)
+
+    # Assert
+    assert "Responsable asignado: Laura Quiroga (Alumnado) -> solicitud #1" in salida
+    assert leer_solicitud(archivo, 1)["responsable"]["id"] == 1
