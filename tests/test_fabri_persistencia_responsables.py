@@ -67,3 +67,23 @@ def test_asignar_responsable_inexistente_muestra_error_y_no_modifica(tmp_path):
     # Assert
     assert "Error: no existe un responsable con ID 9." in salida
     assert leer_solicitud(archivo, 1)["responsable"] == responsable_previo
+
+
+def test_persistencia_al_reabrir_conserva_solicitud_y_responsable(tmp_path):
+    """T18: se registra la #11 y se le asigna responsable; al reabrir el programa sigue estando."""
+    # Arrange
+    archivo = copiar_datos(tmp_path)
+    primera_sesion = [
+        "1", "10003", "4", "Equivalencia de Fisica I aprobada en otra facultad", "",
+        "3", "11", "2",
+        "0",
+    ]
+    ejecutar_sistema(primera_sesion, archivo)
+
+    # Act
+    salida = ejecutar_sistema(["6", "0"], archivo)
+
+    # Assert
+    assert "#11 [PENDIENTE] EQUIVALENCIA - Prioridad: MEDIA" in salida
+    assert "Responsable: Martin Ferreyra (Secretaria Academica)" in salida
+    assert "Total: 11 solicitud(es)." in salida
