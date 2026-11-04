@@ -87,3 +87,17 @@ def test_persistencia_al_reabrir_conserva_solicitud_y_responsable(tmp_path):
     assert "#11 [PENDIENTE] EQUIVALENCIA - Prioridad: MEDIA" in salida
     assert "Responsable: Martin Ferreyra (Secretaria Academica)" in salida
     assert "Total: 11 solicitud(es)." in salida
+
+
+def test_archivo_inexistente_genera_datos_de_ejemplo_y_crea_archivo(tmp_path):
+    """T19: si el archivo de datos no existe, se cargan los datos de ejemplo y se crea el archivo."""
+    # Arrange
+    archivo = tmp_path / "no_existe.json"
+
+    # Act
+    salida = ejecutar_sistema(["6", "0"], archivo)
+
+    # Assert
+    assert "Total: 10 solicitud(es)." in salida
+    assert archivo.exists()
+    assert len(json.loads(archivo.read_text(encoding="utf-8"))["solicitudes"]) == 10
