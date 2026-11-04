@@ -53,3 +53,17 @@ def test_asignar_responsable_valido_asigna_y_guarda(tmp_path):
     # Assert
     assert "Responsable asignado: Laura Quiroga (Alumnado) -> solicitud #1" in salida
     assert leer_solicitud(archivo, 1)["responsable"]["id"] == 1
+
+
+def test_asignar_responsable_inexistente_muestra_error_y_no_modifica(tmp_path):
+    """T17: asignar a la solicitud #1 un responsable que no existe (ID 9)."""
+    # Arrange
+    archivo = copiar_datos(tmp_path)
+    responsable_previo = leer_solicitud(archivo, 1)["responsable"]
+
+    # Act
+    salida = ejecutar_sistema(["3", "1", "9", "0"], archivo)
+
+    # Assert
+    assert "Error: no existe un responsable con ID 9." in salida
+    assert leer_solicitud(archivo, 1)["responsable"] == responsable_previo
