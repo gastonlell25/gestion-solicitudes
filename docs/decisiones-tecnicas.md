@@ -14,3 +14,10 @@
 - **Qué viola:** la regla de Clean Code de usar nombres que revelen la intención.
 - **Qué se propone:** aplicar Rename: `x` → `opcionElegida`, `lst` → `solicitudes`, `proc()` → `procesarSolicitud()`.
 - **Por qué:** el código se entiende sin tener que leer todo el método.
+
+## Juan: filtros y reportes (diagnóstico)
+
+### S07 - Duplicación de filtros
+- **Evidencia:** cuatro métodos `filtrar_por_*` con lógica repetida en `src/gestor_solicitudes.py:319–349`.
+- **Decisión propuesta:** compartir el recorrido en una función común con criterio explícito; conservar las llamadas públicas que usa la consola.
+- **Verificación prevista:** comparar resultados por estado, tipo, prioridad y legajo, incluyendo búsqueda sin coincidencias (T10–T14).
