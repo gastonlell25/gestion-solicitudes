@@ -4,6 +4,7 @@ import datetime
 from modelos.estudiante import Estudiante
 from modelos.responsable import Responsable
 from modelos.solicitud import Solicitud
+from modelos.estado import Estado
 from archivo_json import ArchivoJSON
 
 
@@ -264,27 +265,16 @@ class GestorSolicitudes:
         s = self.buscar(id)
         if s == None:
             return -1
-        if nuevo != "PENDIENTE" and nuevo != "EN_REVISION" and nuevo != "APROBADA" and nuevo != "RECHAZADA" and nuevo != "CERRADA":
+        try:
+            nuevo_estado = Estado.from_str(nuevo)
+        except ValueError:
             return -3
-        actual = s.get_estado()
-        if actual == nuevo:
+        actual_estado = Estado.from_str(s.get_estado())
+        if actual_estado == nuevo_estado:
             return 0
-        if actual == "CERRADA":
+        if not actual_estado.puede_pasar_a(nuevo_estado):
             return -2
-        elif actual == "APROBADA":
-            if nuevo != "CERRADA":
-                return -2
-        elif actual == "RECHAZADA":
-            if nuevo != "CERRADA":
-                return -2
-        elif actual == "PENDIENTE":
-            # desde pendiente puede pasar a cualquier estado
-            pass
-        elif actual == "EN_REVISION":
-            if nuevo == "PENDIENTE":
-                # se permite volver a pendiente
-                pass
-        s.set_estado(nuevo)
+        s.set_estado(nuevo_estado.value)
         s.set_fecha_modificacion(self.hoy())
         self.guardar()
         return 1
