@@ -32,6 +32,23 @@
 - **Qué se propone:** reemplazar el string por un `Enum` con un único parser (`Estado.from_str()`) que normalice y lance una excepción clara si el valor no es válido, en vez de ir agregando `if` por cada variante.
 - **Por qué:** una variante no prevista deja de pasar en silencio: se detecta al cargar el dato, no después, cuando ya afectó un reporte o un filtro.
 
+## Juan: filtros y reportes (diagnóstico)
+
+### S07 - Duplicación de filtros
+- **Evidencia:** cuatro métodos `filtrar_por_*` con lógica repetida en `src/gestor_solicitudes.py:319–349`.
+- **Decisión propuesta:** compartir el recorrido en una función común con criterio explícito; conservar las llamadas públicas que usa la consola.
+- **Verificación prevista:** comparar resultados por estado, tipo, prioridad y legajo, incluyendo búsqueda sin coincidencias (T10–T14).
+
+### S08 - Feature Envy
+- **Evidencia:** `dias_desde_creacion` y `esta_vencida` concentran en el gestor reglas que dependen de atributos de `Solicitud`.
+- **Decisión propuesta:** aplicar Move Method y delegar el cálculo al modelo, pasando la fecha de referencia para que sea comprobable con tests.
+- **Verificación prevista:** comparar los valores de antigüedad y vencimiento para fechas y prioridades iguales antes y después.
+
+### S09 - Data Class
+- **Evidencia:** `Solicitud` contiene mayormente atributos y métodos de acceso, mientras su antigüedad y vencimiento se calculan fuera.
+- **Decisión propuesta:** acercar las reglas propias de una solicitud al modelo sin mezclar allí persistencia, presentación ni lógica de otros actores.
+- **Verificación prevista:** conservar los valores observables de la entidad y superar las pruebas de caracterización.
+
 ## Fabri: persistencia y manejo de errores
 
 ### S10 - God Class y acoplamiento directo a ArchivoJSON
