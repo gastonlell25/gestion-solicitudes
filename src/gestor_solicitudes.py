@@ -4,7 +4,7 @@ import datetime
 from modelos.estudiante import Estudiante
 from modelos.responsable import Responsable
 from modelos.solicitud import Solicitud
-from modelos.estado import Estado
+from modelos.estado import Estado, TransicionInvalidaException
 from archivo_json import ArchivoJSON
 
 
@@ -64,15 +64,15 @@ class GestorSolicitudes:
             nuevo = self.leer("Nuevo estado (PENDIENTE, EN_REVISION, APROBADA, RECHAZADA, CERRADA): ")
             nuevo = nuevo.upper().replace(" ", "_")
             anterior = s.get_estado()
-            r = self.cambiar_estado(id, nuevo)
+            try:
+                r = self.cambiar_estado(id, nuevo)
+            except TransicionInvalidaException as e:
+                print("Error: " + str(e))
+                return True
             if r == 1:
                 print("Estado actualizado: " + anterior + " -> " + nuevo)
             elif r == 0:
                 print("La solicitud ya se encuentra en estado " + nuevo + ".")
-            elif r == -2:
-                print("Error: no se puede pasar de " + anterior + " a " + nuevo + ".")
-            elif r == -3:
-                print("Error: estado invalido.")
             else:
                 print("Error: no existe una solicitud con ID " + id + ".")
         elif op == "3":
@@ -268,12 +268,14 @@ class GestorSolicitudes:
         try:
             nuevo_estado = Estado.from_str(nuevo)
         except ValueError:
-            return -3
+            raise TransicionInvalidaException("estado invalido.") from None
         actual_estado = Estado.from_str(s.get_estado())
         if actual_estado == nuevo_estado:
             return 0
         if not actual_estado.puede_pasar_a(nuevo_estado):
-            return -2
+            raise TransicionInvalidaException(
+                "no se puede pasar de " + actual_estado.value + " a " + nuevo_estado.value + "."
+            )
         s.set_estado(nuevo_estado.value)
         s.set_fecha_modificacion(self.hoy())
         self.guardar()
