@@ -1,3 +1,25 @@
+# Diagnóstico de deuda técnica y code smells
+
+Diagnóstico de la versión `estado-inicial` (etapa 3). Cada integrante analizó su área del código
+y documentó 3 smells: Gaston S01–S03 (registro y consola), Gabriel S04–S06 (estados, tipos y
+prioridades), Juan S07–S09 (filtros y reporte) y Fabri S10–S12 (persistencia y manejo de errores).
+Las ubicaciones corresponden a `estado-inicial` y se verificaron contra el código.
+
+## Criterio de priorización
+
+Prioridad = **impacto × riesgo de mantenimiento**:
+
+- **Alta:** el smell afecta una regla de negocio o los datos (resultados incorrectos, pérdida de
+  información) **o** obliga a tocar varios lugares acoplados ante un cambio habitual.
+- **Media:** dificulta la lectura y el mantenimiento, pero un cambio queda acotado a un solo lugar y
+  no produce resultados incorrectos.
+- **Baja:** problema cosmético o aislado, sin efecto sobre el comportamiento.
+
+> Criterio a confirmar en la reunión de priorización (Fase 1). Si se ajusta, se actualiza esta
+> sección y la columna "Prioridad".
+
+## Tabla de smells
+
 | ID | Smell | Evidencia | Ubicación | Impacto | Riesgo de mantenimiento | Prioridad | Principio violado | Refactoring propuesto | Autor |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | S01 | Long Method | `procesar_opcion()` (94 líneas) y `registrar()` (81 líneas) mezclan lectura de datos, validación, guardado e impresión. Ver `codigo_gaston_S01.png` | `src/gestor_solicitudes.py` → `procesar_opcion()` l. 52–145; `registrar()` l. 148–228 | Difícil de leer y de entender; no se puede testear cada parte por separado | Cambiar una parte (por ejemplo, la validación) puede romper otra (el guardado o la impresión) | Alta | SRP; Clean Code: funciones cortas que hacen una sola cosa | Extract Method | Gaston |
@@ -13,7 +35,22 @@
 | S11 | Manejo de errores pobre | `except:` vacíos que tragan el error (`return None`, `pass`); errores comunicados con códigos `-1`, `-2`, `-3`; la clase de archivo imprime por consola; el resultado de `guardar()` se ignora. Si el JSON está dañado, `cargar()` lo reemplaza por los datos de ejemplo y **pisa el archivo sin avisar** (probado). Si el archivo no se puede escribir, se muestra el error técnico (`[Errno 13] Permission denied`) y a continuación "Responsable asignado" (probado). Ver `codigo_fabri_S11.png` | `src/archivo_json.py` → `leer()` l. 16–17, `escribir()` l. 25–27. `src/gestor_solicitudes.py` → `cargar()` l. 472–477, `asignar_responsable()` l. 295–306, `cambiar_estado()` l. 266–289, `registrar_solicitud()` l. 245–246, `buscar()` l. 312–313, `exportar_csv()` l. 463–464 | Pérdida silenciosa de datos; el usuario ve un mensaje de éxito cuando la operación no se guardó; los códigos numéricos obligan a recordar qué significa cada valor | Cada error nuevo obliga a inventar otro código y a actualizar todos los `if r == ...` del menú; los fallos de archivo son difíciles de diagnosticar | Alta | Clean Code: manejo de errores (excepciones en vez de códigos de retorno, no ignorar errores, no mezclar la consola con el acceso a datos) | Excepciones propias (`SolicitudNoEncontradaException`, `ResponsableNoEncontradoException`, `PersistenciaException`) + eliminar los catch vacíos + mensajes consistentes al usuario | Fabri |
 | S12 | Código muerto y comentarios desactualizados | `validar_email()` y `exportar_csv()` no se llaman desde ningún lado; 7 getters/setters de `Solicitud` sin uso (`get_id`, `get_estudiante`, `get_tipo`, `get_descripcion`, `get_prioridad`, `set_prioridad`, `get_fecha_modificacion`); ramas `elif ... pass` que no hacen nada. Comentarios falsos: estados "P/A/R" en `Solicitud`, "devuelve True" en un método que devuelve enteros, "base de datos" para un archivo JSON; comentarios que repiten el código (`# devuelve el estado`, `# setea el estado`). Ver `codigo_fabri_S12.png` | `src/gestor_solicitudes.py` → `validar_email()` l. 443–451, `exportar_csv()` l. 453–464, `cambiar_estado()` l. 262 y l. 280–286, comentario de `guardar()` l. 509. `src/modelos/solicitud.py` → l. 2, l. 16–32, l. 34, l. 38, l. 51. `src/archivo_json.py` → l. 4 | Confunde al lector: parece que el email se valida con `validar_email()`, pero `registrar()` solo busca una "@" (l. 180); parece que los estados son de una letra | Se mantiene código que nadie usa y los comentarios engañan a quien modifica; hay dos validaciones de email distintas que pueden divergir | Media | Clean Code: sin código muerto; comentarios que explican el "por qué", no el "qué", y que no mienten | Remove Dead Code + borrar o corregir los comentarios | Fabri |
 
+## Resumen
 
+| Prioridad | Cantidad | Smells |
+| --- | --- | --- |
+| Alta | 7 | S01, S04, S05, S06, S08, S10, S11 |
+| Media | 5 | S02, S03, S07, S09, S12 |
+| Baja | 0 | — |
+
+Total: **12 smells** (el mínimo pedido es 8). La mayoría se concentra en `src/gestor_solicitudes.py`,
+la God Class descrita en S10. Por eso el orden de merge de la Fase 3 es Gabriel → Fabri → Gaston → Juan.
+
+**Análisis estático "antes" (Juan):** reporte de pylint en
+[`evidencias/analisis/antes_juan_pylint_reporte.txt`](evidencias/analisis/antes_juan_pylint_reporte.txt)
+y captura en [`evidencias/analisis/antes_juan_pylint_captura.png`](evidencias/analisis/antes_juan_pylint_captura.png).
+
+## Evidencia de cada smell
 
 ### S01 - Long Method (Gaston)
 ![S01 - procesar_opcion() y registrar()](evidencias/antes/codigo_gaston_S01.png)
