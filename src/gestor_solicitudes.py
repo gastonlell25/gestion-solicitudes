@@ -4,7 +4,6 @@ import datetime
 from modelos.estudiante import Estudiante
 from modelos.responsable import Responsable
 from modelos.solicitud import Solicitud
-from modelos.datos_solicitud import DatosSolicitud
 from archivo_json import ArchivoJSON
 
 
@@ -148,40 +147,63 @@ class GestorSolicitudes:
     # registra una nueva solicitud pidiendo los datos por consola
     def registrar(self):
         print("--- Registrar solicitud ---")
+        legajo = self.leer_y_validar_legajo()
+        if legajo is None:
+            return
+        nombre, apellido, email, carrera = self.cargar_datos_estudiante(legajo)
+        if nombre is None:
+            return
+        tipo = self.leer_y_mapear_tipo()
+        if tipo is None:
+            return
+        descripcion = self.leer_y_validar_descripcion()
+        if descripcion is None:
+            return
+        prioridad = self.leer_y_validar_prioridad(tipo)
+        fecha = self.hoy()
+        id = self.registrar_solicitud(legajo, nombre, apellido, email, carrera, tipo, descripcion, prioridad, fecha)
+        if id == -1:
+            print("Error: no se pudo guardar la solicitud.")
+            return
+        self.mostrar_resultado_registro(id, legajo, apellido, nombre, tipo, prioridad, fecha)
+
+    def leer_y_validar_legajo(self):
         legajo = self.leer("Legajo del estudiante: ")
         if legajo == "":
             print("Error: el legajo es obligatorio.")
-            return
+            return None
         if not legajo.isdigit():
             print("Error: el legajo debe ser numerico.")
-            return
+            return None
+        return legajo
+
+    def cargar_datos_estudiante(self, legajo):
         nombre = ""
         apellido = ""
         email = ""
         carrera = ""
-        flag = False
-        # busca el estudiante
         for i in range(len(self.ests)):
             if self.ests[i].legajo == legajo:
-                flag = True
                 nombre = self.ests[i].nombre
                 apellido = self.ests[i].apellido
                 email = self.ests[i].email
                 carrera = self.ests[i].carrera
-        if flag:
-            print("Estudiante encontrado: " + apellido + ", " + nombre + " (" + carrera + ")")
-        else:
-            print("El estudiante no esta registrado. Ingrese sus datos.")
-            nombre = self.leer("Nombre: ")
-            apellido = self.leer("Apellido: ")
-            if nombre == "" or apellido == "":
-                print("Error: nombre y apellido son obligatorios.")
-                return
-            email = self.leer("Email: ")
-            if email.find("@") == -1:
-                print("Error: email invalido.")
-                return
-            carrera = self.leer("Carrera: ")
+                print("Estudiante encontrado: " + apellido + ", " + nombre + " (" + carrera + ")")
+                return nombre, apellido, email, carrera
+        print("El estudiante no esta registrado. Ingrese sus datos.")
+        nombre = self.leer("Nombre: ")
+        apellido = self.leer("Apellido: ")
+        if nombre == "" or apellido == "":
+            print("Error: nombre y apellido son obligatorios.")
+            return None, None, None, None
+        email = self.leer("Email: ")
+        if email.find("@") == -1:
+            print("Error: email invalido.")
+            return None, None, None, None
+        carrera = self.leer("Carrera: ")
+        return nombre, apellido, email, carrera
+
+    def leer_y_mapear_tipo(self):
         print("Tipos de solicitud:")
         print("  1. CERTIFICADO")
         print("  2. CAMBIO_COMISION")
@@ -189,24 +211,28 @@ class GestorSolicitudes:
         print("  4. EQUIVALENCIA")
         print("  5. OTRO")
         op = self.leer("Tipo: ")
-        tipo = ""
         if op == "1":
-            tipo = "CERTIFICADO"
+            return "CERTIFICADO"
         elif op == "2":
-            tipo = "CAMBIO_COMISION"
+            return "CAMBIO_COMISION"
         elif op == "3":
-            tipo = "REVISION_NOTA"
+            return "REVISION_NOTA"
         elif op == "4":
-            tipo = "EQUIVALENCIA"
+            return "EQUIVALENCIA"
         elif op == "5":
-            tipo = "OTRO"
+            return "OTRO"
         else:
             print("Error: tipo invalido.")
-            return
+            return None
+
+    def leer_y_validar_descripcion(self):
         descripcion = self.leer("Descripcion: ")
         if len(descripcion) == 0:
             print("Error: la descripcion no puede estar vacia.")
-            return
+            return None
+        return descripcion
+
+    def leer_y_validar_prioridad(self, tipo):
         pd = self.prioridad_por_defecto(tipo)
         prioridad = self.leer("Prioridad (ALTA/MEDIA/BAJA) [Enter = " + pd + "]: ")
         prioridad = prioridad.upper()
@@ -215,12 +241,9 @@ class GestorSolicitudes:
         elif prioridad != "ALTA" and prioridad != "MEDIA" and prioridad != "BAJA":
             print("Prioridad invalida, se usa la prioridad por defecto: " + pd)
             prioridad = pd
-        fecha = self.hoy()
-        datos = DatosSolicitud(legajo, nombre, apellido, email, carrera, tipo, descripcion, prioridad, fecha)
-        id = self.registrar_solicitud(datos)
-        if id == -1:
-            print("Error: no se pudo guardar la solicitud.")
-            return
+        return prioridad
+
+    def mostrar_resultado_registro(self, id, legajo, apellido, nombre, tipo, prioridad, fecha):
         print("")
         print("Solicitud #" + str(id) + " registrada correctamente.")
         print("  Estudiante: " + legajo + " - " + apellido + ", " + nombre)
@@ -229,19 +252,20 @@ class GestorSolicitudes:
         print("  Estado: PENDIENTE")
         print("  Fecha: " + fecha)
 
-    def registrar_solicitud(self, datos):
+    def registrar_solicitud(self, legajo, nombre, apellido, email, carrera, tipo, descripcion, prioridad, fecha):
         est = None
         for i in range(len(self.ests)):
-            if self.ests[i].legajo == datos.legajo:
+            if self.ests[i].legajo == legajo:
                 est = self.ests[i]
         if est == None:
-            est = Estudiante(datos.legajo, datos.nombre, datos.apellido, datos.email, datos.carrera)
+            est = Estudiante(legajo, nombre, apellido, email, carrera)
             self.ests.append(est)
+        # calcula el proximo id
         aux = 0
         for i in range(len(self.lst)):
             if self.lst[i].id > aux:
                 aux = self.lst[i].id
-        s = Solicitud(aux + 1, est, datos.tipo, datos.descripcion, datos.prioridad, "PENDIENTE", None, datos.fecha, datos.fecha)
+        s = Solicitud(aux + 1, est, tipo, descripcion, prioridad, "PENDIENTE", None, fecha, fecha)
         self.lst.append(s)
         if not self.guardar():
             return -1
