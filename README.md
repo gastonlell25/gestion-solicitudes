@@ -95,8 +95,33 @@ data/
 docs/                      documentación del TPI
 ```
 
+## Pruebas
+
+El sistema cuenta con tests de caracterización escritos antes del refactoring, para
+verificar que el comportamiento externo no cambie entre la versión inicial y la versión
+final. Son tests de punta a punta: ejecutan `src/main.py` simulando la entrada del menú
+por consola y comparan la salida, usando siempre una copia temporal del archivo de datos
+(nunca `data/solicitudes.json`).
+
+Instalación (se recomienda un entorno virtual):
+
+```bash
+python -m venv .venv
+source .venv/bin/activate      # En Windows: .venv\Scripts\Activate.ps1
+pip install pytest
+```
+
+Comando único para correr toda la suite:
+
+```bash
+python -m pytest tests/ -v
+```
+
+El detalle de los 19 casos de prueba (operación, entrada, resultado esperado y resultado
+obtenido en cada versión) está en [`docs/pruebas.md`](docs/pruebas.md).
+
 ## Tecnologías
 
 - Python 3, solo librería estándar (`json`, `os`, `datetime`).
 - Persistencia en archivo JSON.
-- Pruebas (fases posteriores): pytest.
+- Pruebas: pytest (ver sección "Pruebas" arriba).
