@@ -47,6 +47,10 @@ fecha real ni tocar `data/solicitudes.json`.
 
 | ID | Operación | Descripción | Entrada | Resultado esperado | Resultado en estado-inicial | Resultado en versión final | Autor |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| T01 | Registrar | Registrar solicitud válida con legajo existente | Legajo 10001 (Lucia Benitez, existe); menú: opción 1, tipo 1 (CERTIFICADO), descripción válida, prioridad default | `Solicitud #<id> registrada correctamente`; estado = PENDIENTE; se agrega al archivo de datos | Pasa | Pendiente (Fase 4) | Gastón |
+| T02 | Registrar | Registrar sin descripción | Legajo 10001; tipo 1; descripción vacía | `Error: la descripcion no puede estar vacia.` | Pasa | Pendiente (Fase 4) | Gastón |
+| T03 | Registrar | Registrar con legajo inexistente (pero datos válidos) | Legajo 99999 (no existe); nombre, apellido, email, carrera válidos; tipo 1; descripción válida | `El estudiante no esta registrado...`; `Solicitud #<id> registrada correctamente`; estado = PENDIENTE | Pasa | Pendiente (Fase 4) | Gastón |
+| T04 | Listar | Listar todas las solicitudes cargadas | Menú: opción 6 | `Listado de solicitudes`; se muestran todos los IDs (#1 a #10); `Total: 10 solicitud(es).` | Pasa | Pendiente (Fase 4) | Gastón |
 | T05 | Cambiar estado | Transición válida PENDIENTE → EN_REVISION | Solicitud #1 (PENDIENTE); menú: opción 2, ID 1, nuevo estado `EN_REVISION` | `Estado actualizado: PENDIENTE -> EN_REVISION`; el archivo de datos queda con la solicitud #1 en `EN_REVISION` | Pasa | Pendiente (Fase 4) | Gabriel |
 | T06 | Cambiar estado | Transición válida EN_REVISION → APROBADA | Solicitud #2 (EN_REVISION); menú: opción 2, ID 2, nuevo estado `APROBADA` | `Estado actualizado: EN_REVISION -> APROBADA`; el archivo de datos queda con la solicitud #2 en `APROBADA` | Pasa | Pendiente (Fase 4) | Gabriel |
 | T07 | Cambiar estado | Transición rechazada CERRADA → PENDIENTE | Solicitud #5 (CERRADA); menú: opción 2, ID 5, nuevo estado `PENDIENTE` | `Error: no se puede pasar de CERRADA a PENDIENTE.`; la solicitud #5 sigue en `CERRADA` | Pasa | Pendiente (Fase 4) | Gabriel |
