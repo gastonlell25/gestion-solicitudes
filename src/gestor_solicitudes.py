@@ -4,6 +4,7 @@ import datetime
 from modelos.estudiante import Estudiante
 from modelos.responsable import Responsable
 from modelos.solicitud import Solicitud
+from modelos.datos_solicitud import DatosSolicitud
 from archivo_json import ArchivoJSON
 
 
@@ -215,7 +216,8 @@ class GestorSolicitudes:
             print("Prioridad invalida, se usa la prioridad por defecto: " + pd)
             prioridad = pd
         fecha = self.hoy()
-        id = self.registrar_solicitud(legajo, nombre, apellido, email, carrera, tipo, descripcion, prioridad, fecha)
+        datos = DatosSolicitud(legajo, nombre, apellido, email, carrera, tipo, descripcion, prioridad, fecha)
+        id = self.registrar_solicitud(datos)
         if id == -1:
             print("Error: no se pudo guardar la solicitud.")
             return
@@ -227,20 +229,19 @@ class GestorSolicitudes:
         print("  Estado: PENDIENTE")
         print("  Fecha: " + fecha)
 
-    def registrar_solicitud(self, legajo, nombre, apellido, email, carrera, tipo, descripcion, prioridad, fecha):
+    def registrar_solicitud(self, datos):
         est = None
         for i in range(len(self.ests)):
-            if self.ests[i].legajo == legajo:
+            if self.ests[i].legajo == datos.legajo:
                 est = self.ests[i]
         if est == None:
-            est = Estudiante(legajo, nombre, apellido, email, carrera)
+            est = Estudiante(datos.legajo, datos.nombre, datos.apellido, datos.email, datos.carrera)
             self.ests.append(est)
-        # calcula el proximo id
         aux = 0
         for i in range(len(self.lst)):
             if self.lst[i].id > aux:
                 aux = self.lst[i].id
-        s = Solicitud(aux + 1, est, tipo, descripcion, prioridad, "PENDIENTE", None, fecha, fecha)
+        s = Solicitud(aux + 1, est, datos.tipo, datos.descripcion, datos.prioridad, "PENDIENTE", None, datos.fecha, datos.fecha)
         self.lst.append(s)
         if not self.guardar():
             return -1
