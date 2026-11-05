@@ -3,6 +3,9 @@
 | S01 | Long Method | `procesarOpcion()` tiene 80 líneas y mezcla lectura de datos, validación, guardado e impresión. Ver `codigo_gaston_S01.png` | `GestorSolicitudes.java` → `procesarOpcion()`, l. 40–120 | Difícil de leer y de entender; no se puede testear cada parte por separado | Cambiar una parte (por ejemplo, la validación) puede romper otra (el guardado o la impresión) | Alta | SRP; Clean Code: funciones cortas que hacen una sola cosa | Extract Method | Gaston |
 | S02 | Long Parameter List | `registrarSolicitud(legajo, nombre, apellido, email, carrera, tipo, descripcion, prioridad, fecha)` recibe 9 parámetros. Ver `codigo_gaston_S02.png` | `GestorSolicitudes.java` → `registrarSolicitud(...)`, l. 130 | Fácil equivocarse en el orden de los parámetros; las llamadas son largas y poco claras | Agregar un dato nuevo obliga a cambiar la firma y todas las llamadas al método | Media | Clean Code: pocos parámetros por función | Introduce Parameter Object | Gaston |
 | S03 | Malos nombres | Variables `x`, `lst`, `aux` y método `proc()` que no dicen qué contienen ni qué hacen. Ver `codigo_gaston_S03.png` | `GestorSolicitudes.java` → `proc()` l. 150; `lst` l. 45; `x` l. 62 | Hay que leer todo el código para entender qué representa cada nombre | Alto riesgo de confundir variables al modificar el código | Media | Clean Code: nombres que revelan intención | Rename | Gaston |
+| S04 | If/else de transición de estados con códigos de retorno mágicos | `cambiar_estado()` encadena `if`/`elif` por cada estado actual y devuelve números sin significado propio (`-1`, `-2`, `-3`, `0`, `1`); `procesar_opcion()` repite el mismo mapeo para mostrar el mensaje correcto. Ver `codigo_gabriel_S04.png` | `src/gestor_solicitudes.py` → `cambiar_estado()` l. 263–290; `procesar_opcion()` l. 66–76 | Agregar un estado nuevo obliga a tocar dos lugares acoplados por un contrato implícito (los números de retorno) | Fácil olvidarse de actualizar uno de los dos, o reusar un código de error ya ocupado por otro caso | Alta | OCP; Clean Code: evitar "magic numbers" como códigos de error | Replace Conditional with Polymorphism (patrón State) + lanzar `TransicionInvalidaException` en vez de devolver códigos | Gabriel |
+| S05 | Primitive Obsession: tipo y prioridad como strings sueltos | El menú de `registrar()` mapea cada opción numérica a un string de tipo escrito a mano; `prioridad_por_defecto()` repite esos mismos literales para derivar la prioridad por tipo. Ver `codigo_gabriel_S05.png` | `src/gestor_solicitudes.py` → `registrar()` l. 184–216; `prioridad_por_defecto()` l. 249–260 | Agregar un tipo de solicitud nuevo implica tocar el menú y dos bloques `if` por separado, en vez de un solo lugar | Nada impide escribir un string de tipo o prioridad mal tipeado; el error recién aparece en tiempo de ejecución | Alta | Clean Code: Primitive Obsession; OCP | Replace Magic String with Enum: crear `TipoSolicitud` y `Prioridad`, con la prioridad por defecto como propiedad del enum | Gabriel |
+| S06 | Estados y prioridades con inconsistencias de mayúsculas, normalizadas a mano | Los datos de ejemplo ya traen variantes ("pendiente", "Alta", "media"); `proc()` las corrige con una cadena de `if` línea por línea que solo cubre las variantes previstas. Cualquier otra variante pasa sin normalizar. Ver `codigo_gabriel_S06.png` | `src/gestor_solicitudes.py` → `proc()` l. 490–501; `datos_ejemplo()` l. 535, 538, 542 | El resto del código compara contra el string exacto en mayúsculas (`s.estado == "PENDIENTE"`); una variante no prevista hace que una solicitud quede invisible para reportes o filtros sin ningún error visible | Bug silencioso, no lanza excepción, solo da resultados incorrectos | Alta | Clean Code: manejo de errores pobre / validación implícita; SRP | Reemplazar el string por un `Enum` con un parser único (`Estado.from_str()`) que normalice y lance una excepción clara si el valor no es válido | Gabriel |
 | S07 | Duplicación de filtros | `filtrar_por_estado`, `filtrar_por_tipo`, `filtrar_por_prioridad` y `filtrar_por_legajo` repiten el recorrido y la selección de resultados. | `src/gestor_solicitudes.py:319–349` | Se repite la misma estructura de filtrado en cuatro métodos. | Cambiar el recorrido o añadir otro criterio obliga a revisar varios bloques y puede introducir diferencias. | Media | DRY; Clean Code; cohesión | Extraer una función común de filtrado y conservar las operaciones públicas | Juan |
 | S08 | Feature Envy | `dias_desde_creacion(s)` y `esta_vencida(s)` calculan reglas a partir de atributos de `Solicitud`. | `src/gestor_solicitudes.py:419–436`; `src/modelos/solicitud.py` | El gestor conoce demasiados detalles de la solicitud, además de coordinar la interacción. | Cambiar el cálculo de antigüedad o vencimiento obliga a tocar el gestor. | Alta | SRP; cohesión; encapsulación | Move Method a `Solicitud`, con fecha de referencia explícita | Juan |
 | S09 | Data Class / modelo anémico | `Solicitud` almacena datos y contiene getters/setters, mientras las reglas sobre vencimiento permanecen en el gestor. | `src/modelos/solicitud.py:3–55` y `src/gestor_solicitudes.py:419–436` | La entidad contiene poco comportamiento asociado a los datos que representa. | Al incorporar nuevas reglas, la lógica puede seguir acumulándose en el gestor. | Media | Cohesión; SRP | Incorporar únicamente comportamiento propio de `Solicitud`, sin incluir persistencia ni consola | Juan |
@@ -21,6 +24,15 @@
 ### S03 - Malos nombres
 ![S03 - nombres x, lst, proc()](evidencias/antes/codigo_gaston_S03.png)
 
+### S04 - If/else de transición de estados con códigos mágicos
+![S04 - cambiar_estado() y procesar_opcion()](evidencias/antes/codigo_gabriel_S04.png)
+
+### S05 - Primitive Obsession en tipo y prioridad
+![S05 - registrar() y prioridad_por_defecto()](evidencias/antes/codigo_gabriel_S05.png)
+
+### S06 - Estados y prioridades normalizados a mano
+![S06 - proc() y datos_ejemplo()](evidencias/antes/codigo_gabriel_S06.png)
+
 ### S07 - Duplicación de filtros (Juan)
 ![S07 - Métodos de filtrado repetidos](evidencias/antes/codigo_juan_S07.png)
 
@@ -29,6 +41,7 @@
 
 ### S09 - Data Class (Juan)
 ![S09 - Modelo Solicitud](evidencias/antes/codigo_juan_S09.png)
+
 ### S10 - God Class y acoplamiento directo a la persistencia
 ![S10 - GestorSolicitudes crea ArchivoJSON y conoce el formato del JSON](evidencias/antes/codigo_fabri_S10.png)
 

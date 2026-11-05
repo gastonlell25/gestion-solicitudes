@@ -15,6 +15,23 @@
 - **Qué se propone:** aplicar Rename: `x` → `opcionElegida`, `lst` → `solicitudes`, `proc()` → `procesarSolicitud()`.
 - **Por qué:** el código se entiende sin tener que leer todo el método.
 
+## Gabriel: estados, tipos y prioridades
+
+### S04 - If/else de transición de estados con códigos de retorno mágicos
+- **Qué viola:** OCP, porque agregar un estado nuevo obliga a modificar el `if/elif` de `cambiar_estado()` y el `elif` espejo en `procesar_opcion()`; también Clean Code, por usar números sin nombre como códigos de error.
+- **Qué se propone:** Replace Conditional with Polymorphism (patrón State): cada estado concreto sabe a qué estados puede pasar, así agregar un estado no toca código existente (LSP: cualquier estado concreto se usa donde se espera el tipo base). Reemplazar los códigos de retorno por `TransicionInvalidaException` (nombre coordinado con Fabri).
+- **Por qué:** la regla de transición queda en un solo lugar por estado, y el llamador no tiene que recordar qué significa cada número.
+
+### S05 - Primitive Obsession: tipo y prioridad como strings sueltos
+- **Qué viola:** Clean Code (Primitive Obsession) y OCP, porque agregar un tipo de solicitud implica tocar el menú y repetir el literal en `prioridad_por_defecto()`.
+- **Qué se propone:** Replace Magic String with Enum: crear `TipoSolicitud` y `Prioridad`, con la prioridad por defecto como propiedad del propio enum de tipo.
+- **Por qué:** hay un solo lugar que define qué tipos y prioridades existen, y un valor inválido se detecta antes de comparar strings.
+
+### S06 - Estados y prioridades con inconsistencias de mayúsculas, normalizadas a mano
+- **Qué viola:** Clean Code (manejo de errores pobre / validación implícita) y SRP, porque `proc()` mezcla la carga de datos con la normalización de valores mal escritos.
+- **Qué se propone:** reemplazar el string por un `Enum` con un único parser (`Estado.from_str()`) que normalice y lance una excepción clara si el valor no es válido, en vez de ir agregando `if` por cada variante.
+- **Por qué:** una variante no prevista deja de pasar en silencio: se detecta al cargar el dato, no después, cuando ya afectó un reporte o un filtro.
+
 ## Juan: filtros y reportes (diagnóstico)
 
 ### S07 - Duplicación de filtros
@@ -31,6 +48,7 @@
 - **Evidencia:** `Solicitud` contiene mayormente atributos y métodos de acceso, mientras su antigüedad y vencimiento se calculan fuera.
 - **Decisión propuesta:** acercar las reglas propias de una solicitud al modelo sin mezclar allí persistencia, presentación ni lógica de otros actores.
 - **Verificación prevista:** conservar los valores observables de la entidad y superar las pruebas de caracterización.
+
 ## Fabri: persistencia y manejo de errores
 
 ### S10 - God Class y acoplamiento directo a ArchivoJSON
@@ -48,3 +66,5 @@
 - **Qué viola:** las reglas de Clean Code de no dejar código muerto y de que los comentarios expliquen el "por qué" y sean verdaderos.
 - **Qué se propone:** aplicar Remove Dead Code: borrar `exportar_csv()` (si en el futuro hace falta exportar, se recupera del historial de Git), los getters y setters sin uso y las ramas `elif ... pass`. Con `validar_email()` se decide junto con Gaston (área de registro): si `registrar()` pasa a usarla, cambia el comportamiento y se documenta como mejora intencional; si no, se borra. Comentarios: eliminar los que repiten el código y corregir o eliminar los falsos (estados "P/A/R", "devuelve True", "base de datos").
 - **Por qué:** hay menos código para leer y mantener, y los comentarios dejan de dar información equivocada.
+
+
