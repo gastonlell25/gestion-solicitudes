@@ -459,17 +459,16 @@ class GestorSolicitudes:
         for r in data2["responsables"]:
             self.resp.append(Responsable(r["id"], r["nombre"], r["area"]))
         for x in data2["solicitudes"]:
-            # a veces el estado viene en minuscula
-            est = x["estado"]
-            if est == "pendiente" or est == "Pendiente": est = "PENDIENTE"
-            if est == "en revision" or est == "En revision" or est == "en_revision": est = "EN_REVISION"
-            if est == "aprobada" or est == "Aprobada": est = "APROBADA"
-            if est == "rechazada" or est == "Rechazada": est = "RECHAZADA"
-            if est == "cerrada" or est == "Cerrada": est = "CERRADA"
-            pri = x["prioridad"]
-            if pri == "alta" or pri == "Alta": pri = "ALTA"
-            if pri == "media" or pri == "Media": pri = "MEDIA"
-            if pri == "baja" or pri == "Baja": pri = "BAJA"
+            # los datos pueden venir con variantes de mayusculas/minusculas; Estado y
+            # Prioridad las normalizan, y si no reconocen el valor lo dejan como esta
+            try:
+                est = Estado.from_str(x["estado"]).value
+            except ValueError:
+                est = x["estado"]
+            try:
+                pri = Prioridad.from_str(x["prioridad"]).value
+            except ValueError:
+                pri = x["prioridad"]
             e = x["estudiante"]
             aux = Estudiante(e["legajo"], e["nombre"], e["apellido"], e["email"], e["carrera"])
             rr = None
