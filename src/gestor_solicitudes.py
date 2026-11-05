@@ -5,6 +5,8 @@ from modelos.estudiante import Estudiante
 from modelos.responsable import Responsable
 from modelos.solicitud import Solicitud
 from modelos.estado import Estado, TransicionInvalidaException
+from modelos.tipo_solicitud import TipoSolicitud
+from modelos.prioridad import Prioridad
 from archivo_json import ArchivoJSON
 
 
@@ -183,48 +185,38 @@ class GestorSolicitudes:
                 return
             carrera = self.leer("Carrera: ")
         print("Tipos de solicitud:")
-        print("  1. CERTIFICADO")
-        print("  2. CAMBIO_COMISION")
-        print("  3. REVISION_NOTA")
-        print("  4. EQUIVALENCIA")
-        print("  5. OTRO")
+        for i, t in enumerate(TipoSolicitud, start=1):
+            print("  " + str(i) + ". " + t.value)
         op = self.leer("Tipo: ")
-        tipo = ""
-        if op == "1":
-            tipo = "CERTIFICADO"
-        elif op == "2":
-            tipo = "CAMBIO_COMISION"
-        elif op == "3":
-            tipo = "REVISION_NOTA"
-        elif op == "4":
-            tipo = "EQUIVALENCIA"
-        elif op == "5":
-            tipo = "OTRO"
-        else:
+        try:
+            tipo = TipoSolicitud.from_opcion_menu(op)
+        except ValueError:
             print("Error: tipo invalido.")
             return
         descripcion = self.leer("Descripcion: ")
         if len(descripcion) == 0:
             print("Error: la descripcion no puede estar vacia.")
             return
-        pd = self.prioridad_por_defecto(tipo)
-        prioridad = self.leer("Prioridad (ALTA/MEDIA/BAJA) [Enter = " + pd + "]: ")
-        prioridad = prioridad.upper()
-        if prioridad == "":
+        pd = tipo.prioridad_por_defecto()
+        prioridad_texto = self.leer("Prioridad (ALTA/MEDIA/BAJA) [Enter = " + pd.value + "]: ")
+        if prioridad_texto == "":
             prioridad = pd
-        elif prioridad != "ALTA" and prioridad != "MEDIA" and prioridad != "BAJA":
-            print("Prioridad invalida, se usa la prioridad por defecto: " + pd)
-            prioridad = pd
+        else:
+            try:
+                prioridad = Prioridad.from_str(prioridad_texto)
+            except ValueError:
+                print("Prioridad invalida, se usa la prioridad por defecto: " + pd.value)
+                prioridad = pd
         fecha = self.hoy()
-        id = self.registrar_solicitud(legajo, nombre, apellido, email, carrera, tipo, descripcion, prioridad, fecha)
+        id = self.registrar_solicitud(legajo, nombre, apellido, email, carrera, tipo.value, descripcion, prioridad.value, fecha)
         if id == -1:
             print("Error: no se pudo guardar la solicitud.")
             return
         print("")
         print("Solicitud #" + str(id) + " registrada correctamente.")
         print("  Estudiante: " + legajo + " - " + apellido + ", " + nombre)
-        print("  Tipo: " + tipo)
-        print("  Prioridad: " + prioridad)
+        print("  Tipo: " + tipo.value)
+        print("  Prioridad: " + prioridad.value)
         print("  Estado: PENDIENTE")
         print("  Fecha: " + fecha)
 
@@ -246,19 +238,6 @@ class GestorSolicitudes:
         if not self.guardar():
             return -1
         return s.id
-
-    def prioridad_por_defecto(self, tipo):
-        if tipo == "CERTIFICADO":
-            return "BAJA"
-        elif tipo == "CAMBIO_COMISION":
-            return "ALTA"
-        elif tipo == "REVISION_NOTA":
-            return "ALTA"
-        elif tipo == "EQUIVALENCIA":
-            return "MEDIA"
-        elif tipo == "OTRO":
-            return "BAJA"
-        return "BAJA"
 
     # devuelve True si se pudo cambiar el estado
     def cambiar_estado(self, id, nuevo):
