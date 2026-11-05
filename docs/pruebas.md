@@ -1,0 +1,54 @@
+# Pruebas de caracterización
+
+Tests de punta a punta, escritos antes del refactoring, sobre la versión `estado-inicial`.
+Cada test simula la entrada del menú por consola (vía `subprocess`) y usa una copia
+temporal de `data/solicitudes.json`, nunca el archivo real, para que cada corrida arranque
+igual. Sirven para comprobar que después de refactorizar, el comportamiento externo del
+sistema no cambió, por lo cual si siguen en verde sobre la versión final, no hubo regresiones.
+
+**Framework:** pytest. Lo instala quien vaya a correr la suite (ver "Pruebas" en el
+README para la instalación con entorno virtual).
+
+**Comando único para correr toda la suite** (desde la raíz del repo):
+
+```bash
+python -m pytest tests/ -v
+```
+
+## Por qué pytest
+
+Seleccionamos este framework porque es el estándar de facto en Python, una de las
+opciones más usadas y mejor documentadas. Nos permite:
+- Escribir los tests como funciones simples con `assert`, sin heredar de una clase ni
+  escribir boilerplate de `setUp`/`tearDown`.
+- Usar de fábrica la fixture `tmp_path`, que da un directorio temporal único por test —
+  es justo lo que se necesita para aislar cada corrida con su propia copia de
+  `data/solicitudes.json` sin tocar el archivo real ni limpiar nada a mano.
+
+## Cómo se simula la entrada de consola
+
+Se evaluaron dos formas de probar un programa que lee con `input()`:
+
+1. **Mockear `input()`** (`unittest.mock.patch("builtins.input", ...)`): más rápido,
+   pero obliga a importar el módulo y llamar directamente a sus funciones internas. Un
+   test así se acopla a la implementación (por ejemplo, al método `leer()` del gestor) y
+   se rompe con refactors que no cambian el comportamiento, solo la estructura interna —
+   justo lo que estas pruebas de caracterización no quieren.
+2. **Correr el programa como subproceso real** (`subprocess.run`, pasándole las entradas
+   del menú por `stdin` con el parámetro `input=` y capturando `stdout`): prueba el
+   sistema exactamente como lo usa una persona real, de punta a punta, sin conocer nada
+   de su implementación interna. Es un poco más lento, pero sigue valiendo sin cambios
+   después de cualquier refactoring, mientras el comportamiento observable no cambie.
+
+Se eligió la opción 2 por ese motivo. Las variables de entorno `FECHA_HOY` (fecha fija,
+para resultados reproducibles) y `ARCHIVO_DATOS` (ruta del archivo de datos temporal) ya
+las soporta el sistema (ver README), así que los tests las usan para no depender de la
+fecha real ni tocar `data/solicitudes.json`.
+
+| ID | Operación | Descripción | Entrada | Resultado esperado | Resultado en estado-inicial | Resultado en versión final | Autor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| T05 | Cambiar estado | Transición válida PENDIENTE → EN_REVISION | Solicitud #1 (PENDIENTE); menú: opción 2, ID 1, nuevo estado `EN_REVISION` | `Estado actualizado: PENDIENTE -> EN_REVISION`; el archivo de datos queda con la solicitud #1 en `EN_REVISION` | Pasa | Pendiente (Fase 4) | Gabriel |
+| T06 | Cambiar estado | Transición válida EN_REVISION → APROBADA | Solicitud #2 (EN_REVISION); menú: opción 2, ID 2, nuevo estado `APROBADA` | `Estado actualizado: EN_REVISION -> APROBADA`; el archivo de datos queda con la solicitud #2 en `APROBADA` | Pasa | Pendiente (Fase 4) | Gabriel |
+| T07 | Cambiar estado | Transición rechazada CERRADA → PENDIENTE | Solicitud #5 (CERRADA); menú: opción 2, ID 5, nuevo estado `PENDIENTE` | `Error: no se puede pasar de CERRADA a PENDIENTE.`; la solicitud #5 sigue en `CERRADA` | Pasa | Pendiente (Fase 4) | Gabriel |
+| T08 | Cambiar estado | Transición rechazada APROBADA → PENDIENTE | Solicitud #4 (APROBADA); menú: opción 2, ID 4, nuevo estado `PENDIENTE` | `Error: no se puede pasar de APROBADA a PENDIENTE.`; la solicitud #4 sigue en `APROBADA` | Pasa | Pendiente (Fase 4) | Gabriel |
+| T09 | Cambiar estado | Transición válida APROBADA → CERRADA | Solicitud #4 (APROBADA); menú: opción 2, ID 4, nuevo estado `CERRADA` | `Estado actualizado: APROBADA -> CERRADA`; el archivo de datos queda con la solicitud #4 en `CERRADA` | Pasa | Pendiente (Fase 4) | Gabriel |
