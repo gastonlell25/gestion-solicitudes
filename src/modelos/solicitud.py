@@ -13,6 +13,23 @@ class Solicitud:
         self.fecha_creacion = fecha_creacion
         self.fecha_modificacion = fecha_modificacion
 
+    def dias_desde_creacion(self, fecha_referencia):
+        """Antigüedad de la solicitud a una fecha explícita (AAAA-MM-DD)."""
+        from datetime import date
+        # La lectura por partes conserva fechas sin ceros iniciales admitidas por el original.
+        creacion = date(*map(int, self.fecha_creacion.split("-")))
+        referencia = date(*map(int, fecha_referencia.split("-")))
+        return (referencia - creacion).days
+
+    def esta_vencida(self, fecha_referencia):
+        """Reproduce los plazos originales: ALTA=3, MEDIA=7, BAJA=15 días."""
+        if self.estado not in ("PENDIENTE", "EN_REVISION"):
+            return False
+        dias = self.dias_desde_creacion(fecha_referencia)
+        plazos = {"ALTA": 3, "MEDIA": 7, "BAJA": 15}
+        # Prioridad no reconocida sigue sin estar vencida, como en el original.
+        return self.prioridad in plazos and dias > plazos[self.prioridad]
+
     def get_id(self):
         return self.id
 
