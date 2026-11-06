@@ -311,37 +311,23 @@ class GestorSolicitudes:
                 return self.lst[i]
         return None
 
+    def _filtrar(self, obtener_valor, valor):
+        """Recorrido único; cada función pública conserva la semántica original."""
+        return [solicitud for solicitud in self.lst
+                if obtener_valor(solicitud) == valor]
+
     def filtrar_por_estado(self, x):
-        res = []
-        x = x.upper().strip().replace(" ", "_")
-        for i in range(len(self.lst)):
-            if self.lst[i].estado.upper() == x:
-                res.append(self.lst[i])
-        return res
+        return self._filtrar(lambda s: s.estado.upper(), x.upper().strip().replace(" ", "_"))
 
     def filtrar_por_tipo(self, x):
-        res = []
-        x = x.upper().strip().replace(" ", "_")
-        for i in range(len(self.lst)):
-            if self.lst[i].tipo.upper() == x:
-                res.append(self.lst[i])
-        return res
+        return self._filtrar(lambda s: s.tipo.upper(), x.upper().strip().replace(" ", "_"))
 
     def filtrar_por_prioridad(self, x):
-        res = []
-        x = x.upper().strip()
-        for i in range(len(self.lst)):
-            if self.lst[i].prioridad.upper() == x:
-                res.append(self.lst[i])
-        return res
+        return self._filtrar(lambda s: s.prioridad.upper(), x.upper().strip())
 
     def filtrar_por_legajo(self, x):
-        res = []
-        x = x.strip()
-        for i in range(len(self.lst)):
-            if self.lst[i].estudiante.legajo == x:
-                res.append(self.lst[i])
-        return res
+        # El legajo mantiene comparación exacta, sin normalizar mayúsculas.
+        return self._filtrar(lambda s: s.estudiante.legajo, x.strip())
 
     def mostrar(self, s):
         r = "Sin asignar"
