@@ -4,6 +4,9 @@ import datetime
 from modelos.estudiante import Estudiante
 from modelos.responsable import Responsable
 from modelos.solicitud import Solicitud
+from modelos.estado import Estado, TransicionInvalidaException
+from modelos.tipo_solicitud import TipoSolicitud
+from modelos.prioridad import Prioridad
 from archivo_json import ArchivoJSON
 
 
@@ -63,15 +66,15 @@ class GestorSolicitudes:
             nuevo = self.leer("Nuevo estado (PENDIENTE, EN_REVISION, APROBADA, RECHAZADA, CERRADA): ")
             nuevo = nuevo.upper().replace(" ", "_")
             anterior = s.get_estado()
-            r = self.cambiar_estado(id, nuevo)
+            try:
+                r = self.cambiar_estado(id, nuevo)
+            except TransicionInvalidaException as e:
+                print("Error: " + str(e))
+                return True
             if r == 1:
                 print("Estado actualizado: " + anterior + " -> " + nuevo)
             elif r == 0:
                 print("La solicitud ya se encuentra en estado " + nuevo + ".")
-            elif r == -2:
-                print("Error: no se puede pasar de " + anterior + " a " + nuevo + ".")
-            elif r == -3:
-                print("Error: estado invalido.")
             else:
                 print("Error: no existe una solicitud con ID " + id + ".")
         elif op == "3":
@@ -161,7 +164,7 @@ class GestorSolicitudes:
             return
         prioridad = self.leer_y_validar_prioridad(tipo)
         fecha = self.hoy()
-        id = self.registrar_solicitud(legajo, nombre, apellido, email, carrera, tipo, descripcion, prioridad, fecha)
+        id = self.registrar_solicitud(legajo, nombre, apellido, email, carrera, tipo.value, descripcion, prioridad.value, fecha)
         if id == -1:
             print("Error: no se pudo guardar la solicitud.")
             return
@@ -205,23 +208,12 @@ class GestorSolicitudes:
 
     def leer_y_mapear_tipo(self):
         print("Tipos de solicitud:")
-        print("  1. CERTIFICADO")
-        print("  2. CAMBIO_COMISION")
-        print("  3. REVISION_NOTA")
-        print("  4. EQUIVALENCIA")
-        print("  5. OTRO")
+        for i, t in enumerate(TipoSolicitud, start=1):
+            print("  " + str(i) + ". " + t.value)
         op = self.leer("Tipo: ")
-        if op == "1":
-            return "CERTIFICADO"
-        elif op == "2":
-            return "CAMBIO_COMISION"
-        elif op == "3":
-            return "REVISION_NOTA"
-        elif op == "4":
-            return "EQUIVALENCIA"
-        elif op == "5":
-            return "OTRO"
-        else:
+        try:
+            return TipoSolicitud.from_opcion_menu(op)
+        except ValueError:
             print("Error: tipo invalido.")
             return None
 
@@ -233,22 +225,22 @@ class GestorSolicitudes:
         return descripcion
 
     def leer_y_validar_prioridad(self, tipo):
-        pd = self.prioridad_por_defecto(tipo)
-        prioridad = self.leer("Prioridad (ALTA/MEDIA/BAJA) [Enter = " + pd + "]: ")
-        prioridad = prioridad.upper()
-        if prioridad == "":
-            prioridad = pd
-        elif prioridad != "ALTA" and prioridad != "MEDIA" and prioridad != "BAJA":
-            print("Prioridad invalida, se usa la prioridad por defecto: " + pd)
-            prioridad = pd
-        return prioridad
+        pd = tipo.prioridad_por_defecto()
+        prioridad_texto = self.leer("Prioridad (ALTA/MEDIA/BAJA) [Enter = " + pd.value + "]: ")
+        if prioridad_texto == "":
+            return pd
+        try:
+            return Prioridad.from_str(prioridad_texto)
+        except ValueError:
+            print("Prioridad invalida, se usa la prioridad por defecto: " + pd.value)
+            return pd
 
     def mostrar_resultado_registro(self, id, legajo, apellido, nombre, tipo, prioridad, fecha):
         print("")
         print("Solicitud #" + str(id) + " registrada correctamente.")
         print("  Estudiante: " + legajo + " - " + apellido + ", " + nombre)
-        print("  Tipo: " + tipo)
-        print("  Prioridad: " + prioridad)
+        print("  Tipo: " + tipo.value)
+        print("  Prioridad: " + prioridad.value)
         print("  Estado: PENDIENTE")
         print("  Fecha: " + fecha)
 
@@ -271,45 +263,23 @@ class GestorSolicitudes:
             return -1
         return s.id
 
-    def prioridad_por_defecto(self, tipo):
-        if tipo == "CERTIFICADO":
-            return "BAJA"
-        elif tipo == "CAMBIO_COMISION":
-            return "ALTA"
-        elif tipo == "REVISION_NOTA":
-            return "ALTA"
-        elif tipo == "EQUIVALENCIA":
-            return "MEDIA"
-        elif tipo == "OTRO":
-            return "BAJA"
-        return "BAJA"
-
     # devuelve True si se pudo cambiar el estado
     def cambiar_estado(self, id, nuevo):
         s = self.buscar(id)
         if s == None:
             return -1
-        if nuevo != "PENDIENTE" and nuevo != "EN_REVISION" and nuevo != "APROBADA" and nuevo != "RECHAZADA" and nuevo != "CERRADA":
-            return -3
-        actual = s.get_estado()
-        if actual == nuevo:
+        try:
+            nuevo_estado = Estado.from_str(nuevo)
+        except ValueError:
+            raise TransicionInvalidaException("estado invalido.") from None
+        actual_estado = Estado.from_str(s.get_estado())
+        if actual_estado == nuevo_estado:
             return 0
-        if actual == "CERRADA":
-            return -2
-        elif actual == "APROBADA":
-            if nuevo != "CERRADA":
-                return -2
-        elif actual == "RECHAZADA":
-            if nuevo != "CERRADA":
-                return -2
-        elif actual == "PENDIENTE":
-            # desde pendiente puede pasar a cualquier estado
-            pass
-        elif actual == "EN_REVISION":
-            if nuevo == "PENDIENTE":
-                # se permite volver a pendiente
-                pass
-        s.set_estado(nuevo)
+        if not actual_estado.puede_pasar_a(nuevo_estado):
+            raise TransicionInvalidaException(
+                "no se puede pasar de " + actual_estado.value + " a " + nuevo_estado.value + "."
+            )
+        s.set_estado(nuevo_estado.value)
         s.set_fecha_modificacion(self.hoy())
         self.guardar()
         return 1
@@ -513,17 +483,16 @@ class GestorSolicitudes:
         for r in data2["responsables"]:
             self.resp.append(Responsable(r["id"], r["nombre"], r["area"]))
         for x in data2["solicitudes"]:
-            # a veces el estado viene en minuscula
-            est = x["estado"]
-            if est == "pendiente" or est == "Pendiente": est = "PENDIENTE"
-            if est == "en revision" or est == "En revision" or est == "en_revision": est = "EN_REVISION"
-            if est == "aprobada" or est == "Aprobada": est = "APROBADA"
-            if est == "rechazada" or est == "Rechazada": est = "RECHAZADA"
-            if est == "cerrada" or est == "Cerrada": est = "CERRADA"
-            pri = x["prioridad"]
-            if pri == "alta" or pri == "Alta": pri = "ALTA"
-            if pri == "media" or pri == "Media": pri = "MEDIA"
-            if pri == "baja" or pri == "Baja": pri = "BAJA"
+            # los datos pueden venir con variantes de mayusculas/minusculas; Estado y
+            # Prioridad las normalizan, y si no reconocen el valor lo dejan como esta
+            try:
+                est = Estado.from_str(x["estado"]).value
+            except ValueError:
+                est = x["estado"]
+            try:
+                pri = Prioridad.from_str(x["prioridad"]).value
+            except ValueError:
+                pri = x["prioridad"]
             e = x["estudiante"]
             aux = Estudiante(e["legajo"], e["nombre"], e["apellido"], e["email"], e["carrera"])
             rr = None

@@ -20,17 +20,23 @@
 ### S04 - If/else de transición de estados con códigos de retorno mágicos
 - **Qué viola:** OCP, porque agregar un estado nuevo obliga a modificar el `if/elif` de `cambiar_estado()` y el `elif` espejo en `procesar_opcion()`; también Clean Code, por usar números sin nombre como códigos de error.
 - **Qué se propone:** Replace Conditional with Polymorphism (patrón State): cada estado concreto sabe a qué estados puede pasar, así agregar un estado no toca código existente (LSP: cualquier estado concreto se usa donde se espera el tipo base). Reemplazar los códigos de retorno por `TransicionInvalidaException` (nombre coordinado con Fabri).
+- **Alternativas consideradas:** el patrón State clásico de GoF, con una subclase por estado (`EstadoPendiente`, `EstadoAprobada`, etc.). Se descarta porque con solo 5 estados fijos y sin datos ni comportamiento propio más allá de "a qué puedo pasar", crear 5 clases agrega complejidad sin un beneficio real; un `Enum` con una tabla de transiciones logra lo mismo (cada estado "sabe" a dónde puede ir) con mucho menos código.
 - **Por qué:** la regla de transición queda en un solo lugar por estado, y el llamador no tiene que recordar qué significa cada número.
+- **Implementado:** `src/modelos/estado.py` (commits `81bbed2`, `ac7188a`, `bf12da2`).
 
 ### S05 - Primitive Obsession: tipo y prioridad como strings sueltos
 - **Qué viola:** Clean Code (Primitive Obsession) y OCP, porque agregar un tipo de solicitud implica tocar el menú y repetir el literal en `prioridad_por_defecto()`.
 - **Qué se propone:** Replace Magic String with Enum: crear `TipoSolicitud` y `Prioridad`, con la prioridad por defecto como propiedad del propio enum de tipo.
+- **Alternativas consideradas:** usar constantes de módulo (`TIPO_CERTIFICADO = "CERTIFICADO"`, etc.) en vez de un `Enum`. Se descarta porque las constantes no validan nada (cualquier string pasa) ni permiten agregarles comportamiento propio; el `Enum` sí valida con `from_opcion_menu()`/`from_str()` y permite que `prioridad_por_defecto()` viva junto al tipo, no repetida en el gestor.
 - **Por qué:** hay un solo lugar que define qué tipos y prioridades existen, y un valor inválido se detecta antes de comparar strings.
+- **Implementado:** `src/modelos/tipo_solicitud.py`, `src/modelos/prioridad.py` (commits `9a1b503`, `d533d4d`).
 
 ### S06 - Estados y prioridades con inconsistencias de mayúsculas, normalizadas a mano
 - **Qué viola:** Clean Code (manejo de errores pobre / validación implícita) y SRP, porque `proc()` mezcla la carga de datos con la normalización de valores mal escritos.
 - **Qué se propone:** reemplazar el string por un `Enum` con un único parser (`Estado.from_str()`) que normalice y lance una excepción clara si el valor no es válido, en vez de ir agregando `if` por cada variante.
+- **Alternativas consideradas:** seguir agregando líneas `if` para cubrir más variantes a medida que aparecen. Se descarta porque no ataca el problema de fondo (una lista abierta e impredecible de casos); reusar `Estado.from_str()`/`Prioridad.from_str()` normaliza cualquier variante de mayúsculas/espacios sin agrandar una lista frágil, y si el valor no se reconoce se deja igual que antes (no se cambia el comportamiento ante datos corruptos).
 - **Por qué:** una variante no prevista deja de pasar en silencio: se detecta al cargar el dato, no después, cuando ya afectó un reporte o un filtro.
+- **Implementado:** `src/gestor_solicitudes.py` → `proc()` (commit `317165d`).
 
 ## Juan: filtros y reportes (diagnóstico)
 
