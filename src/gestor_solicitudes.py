@@ -13,6 +13,7 @@ from modelos.excepciones import (
 )
 from persistencia.datos_sistema import DatosSistema
 from persistencia.solicitud_repositorio import PersistenciaException, SolicitudRepositorio
+from servicios.reporte_service import ReporteService
 
 
 # Clase principal del sistema
@@ -318,37 +319,23 @@ class GestorSolicitudes:
                 return self.lst[i]
         return None
 
+    def _filtrar(self, obtener_valor, valor):
+        """Recorrido único; cada función pública conserva la semántica original."""
+        return [solicitud for solicitud in self.lst
+                if obtener_valor(solicitud) == valor]
+
     def filtrar_por_estado(self, x):
-        res = []
-        x = x.upper().strip().replace(" ", "_")
-        for i in range(len(self.lst)):
-            if self.lst[i].estado.upper() == x:
-                res.append(self.lst[i])
-        return res
+        return self._filtrar(lambda s: s.estado.upper(), x.upper().strip().replace(" ", "_"))
 
     def filtrar_por_tipo(self, x):
-        res = []
-        x = x.upper().strip().replace(" ", "_")
-        for i in range(len(self.lst)):
-            if self.lst[i].tipo.upper() == x:
-                res.append(self.lst[i])
-        return res
+        return self._filtrar(lambda s: s.tipo.upper(), x.upper().strip().replace(" ", "_"))
 
     def filtrar_por_prioridad(self, x):
-        res = []
-        x = x.upper().strip()
-        for i in range(len(self.lst)):
-            if self.lst[i].prioridad.upper() == x:
-                res.append(self.lst[i])
-        return res
+        return self._filtrar(lambda s: s.prioridad.upper(), x.upper().strip())
 
     def filtrar_por_legajo(self, x):
-        res = []
-        x = x.strip()
-        for i in range(len(self.lst)):
-            if self.lst[i].estudiante.legajo == x:
-                res.append(self.lst[i])
-        return res
+        # El legajo mantiene comparación exacta, sin normalizar mayúsculas.
+        return self._filtrar(lambda s: s.estudiante.legajo, x.strip())
 
     def mostrar(self, s):
         r = "Sin asignar"
@@ -366,76 +353,15 @@ class GestorSolicitudes:
         print("")
 
     def reporte(self):
-        c1 = c2 = c3 = c4 = c5 = 0
-        t1 = t2 = t3 = t4 = t5 = 0
-        pa = 0
-        v = 0
-        # recorre la lista
-        for i in range(len(self.lst)):
-            x = self.lst[i]
-            if x.estado == "PENDIENTE":
-                c1 += 1
-            elif x.estado == "EN_REVISION":
-                c2 += 1
-            elif x.estado == "APROBADA":
-                c3 += 1
-            elif x.estado == "RECHAZADA":
-                c4 += 1
-            elif x.estado == "CERRADA":
-                c5 += 1
-            if x.tipo == "CERTIFICADO":
-                t1 += 1
-            elif x.tipo == "CAMBIO_COMISION":
-                t2 += 1
-            elif x.tipo == "REVISION_NOTA":
-                t3 += 1
-            elif x.tipo == "EQUIVALENCIA":
-                t4 += 1
-            elif x.tipo == "OTRO":
-                t5 += 1
-            if x.estado[0:4] == "PEND" and x.prioridad.upper() == "ALTA":
-                pa += 1
-            if self.esta_vencida(x):
-                v += 1
-        print("============ REPORTE ============")
-        print("Total de solicitudes: " + str(len(self.lst)))
-        print("")
-        print("Cantidad por estado:")
-        print("  PENDIENTE: " + str(c1))
-        print("  EN_REVISION: " + str(c2))
-        print("  APROBADA: " + str(c3))
-        print("  RECHAZADA: " + str(c4))
-        print("  CERRADA: " + str(c5))
-        print("")
-        print("Cantidad por tipo:")
-        print("  CERTIFICADO: " + str(t1))
-        print("  CAMBIO_COMISION: " + str(t2))
-        print("  REVISION_NOTA: " + str(t3))
-        print("  EQUIVALENCIA: " + str(t4))
-        print("  OTRO: " + str(t5))
-        print("")
-        print("Pendientes de prioridad ALTA: " + str(pa))
-        print("Solicitudes vencidas: " + str(v))
-        print("=================================")
+        # Se mantiene la misma salida de consola, pero el cálculo es independiente.
+        print(ReporteService.generar(self.lst, self.hoy()))
 
     def dias_desde_creacion(self, s):
-        p = s.get_fecha_creacion().split("-")
-        h = self.hoy().split("-")
-        f1 = datetime.date(int(p[0]), int(p[1]), int(p[2]))
-        f2 = datetime.date(int(h[0]), int(h[1]), int(h[2]))
-        return (f2 - f1).days
+        # Puente para mantener las llamadas de la consola durante la refactorización.
+        return s.dias_desde_creacion(self.hoy())
 
     def esta_vencida(self, s):
-        if s.estado != "PENDIENTE" and s.estado != "EN_REVISION":
-            return False
-        d = self.dias_desde_creacion(s)
-        if s.prioridad == "ALTA" and d > 3:
-            return True
-        if s.prioridad == "MEDIA" and d > 7:
-            return True
-        if s.prioridad == "BAJA" and d > 15:
-            return True
-        return False
+        return s.esta_vencida(self.hoy())
 
     def hoy(self):
         if os.environ.get("FECHA_HOY"):
