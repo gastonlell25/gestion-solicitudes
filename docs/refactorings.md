@@ -397,6 +397,172 @@ con un `RepositorioEnMemoria` que no toca ningún archivo.
 
 ---
 
+## 7 - Replace Error Code with Exception: PersistenciaException (Fabri)
+
+**Smell que resuelve:** S11 — Manejo de errores pobre (parte de persistencia).
+
+**Principio relacionado:** Clean Code: manejo de errores (excepciones en vez de códigos, no ignorar
+errores, no mezclar la consola con el acceso a datos).
+
+**Archivos y métodos afectados:** `src/archivo_json.py` → `leer()`, `escribir()`;
+`src/persistencia/solicitud_repositorio_archivo.py` → `cargar()`, `guardar()`, `leer_texto()` (nuevo);
+`src/persistencia/solicitud_repositorio.py` → `PersistenciaException` (nueva);
+`src/gestor_solicitudes.py` → `iniciar()`, `registrar()`, `registrar_solicitud()`, `guardar()`.
+
+**Código antes:**
+```python
+# archivo_json.py
+def leer(self):
+    try:
+        ...
+    except:                       # cualquier error (incluso permisos) se vuelve None
+        return None
+
+def escribir(self, txt):
+    try:
+        ...
+        return True
+    except Exception as e:
+        print("Error: " + str(e))  # la capa de datos imprime en consola
+        return False
+
+# repositorio: un archivo dañado se trata igual que uno inexistente
+try:
+    data2 = json.loads(txt)
+except:
+    pass
+if data2 == None:
+    datos = self.proc(self.datos_ejemplo())
+    self.guardar(datos)           # pisa el archivo dañado: se pierden los datos
+
+# gestor: el resultado de guardar() se ignora
+s.set_responsable(x)
+self.guardar()
+return 1                          # la consola muestra "Responsable asignado"
+```
+
+**Código después:**
+```python
+# archivo_json.py: solo se maneja el caso esperado
+def leer(self):
+    try:
+        with open(self.ruta, "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return None
+
+# repositorio: traduce los errores técnicos a una excepción con mensaje para el usuario
+def cargar(self):
+    txt = self.leer_texto()
+    if txt is None:               # primera ejecución: se crean los datos de ejemplo
+        ...
+    try:
+        return self.proc(json.loads(txt))
+    except json.JSONDecodeError as e:
+        raise PersistenciaException(self.descripcion_archivo() + " tiene un formato invalido (linea ...)") from e
+
+# gestor: un único lugar muestra el error y descarta el cambio que no se guardó
+try:
+    flag = self.procesar_opcion(op)
+except PersistenciaException as e:
+    print("Error: " + str(e) + ". La operacion no se guardo.")
+    self.cargar()
+```
+
+**Justificación:** ningún error queda escondido. La capa de datos ya no imprime y el usuario recibe
+siempre el mismo tipo de mensaje. Además se corrigen dos bugs del sistema base (ver "Bugs del sistema
+base" en `docs/pruebas.md`):
+- un archivo de datos dañado ya no se reemplaza por los datos de ejemplo;
+- un guardado fallido ya no muestra un mensaje de éxito ni deja el cambio pendiente en memoria.
+
+**Commits:** `511b9fd` (guardado), `37cc26e` (lectura y archivo dañado), `6f58b7c` (tests).
+
+**Resultado de los tests:** 79/79 en verde después de cada commit; 82/82 con los 3 tests nuevos de
+`tests/test_fabri_errores.py`. Los dos tests de punta a punta de ese archivo **fallan sobre `main`**,
+o sea que detectan los bugs. En las sesiones de consola solo cambian los dos casos de error; el resto es idéntico.
+
+**Evidencia:** `docs/evidencias/despues/despues_fabri_diff_excepciones-persistencia.png`; pares
+`antes_/despues_fabri_archivo-danado.png` y `antes_/despues_fabri_guardado-fallido.png`.
+
+---
+
+## 8 - Replace Error Code with Exception: excepciones propias del gestor (Fabri)
+
+**Smell que resuelve:** S11 — Manejo de errores pobre (códigos `-1`, `-2`, `-3` y `except:` vacíos).
+
+**Principio relacionado:** Clean Code: manejo de errores; OCP (un error nuevo no obliga a tocar los `if` del menú).
+
+**Archivos y métodos afectados:** `src/modelos/excepciones.py` (nuevo), `src/gestor_solicitudes.py` →
+`procesar_opcion()`, `cambiar_estado()`, `asignar_responsable()`, `buscar_existente()` (nuevo), `buscar()`.
+
+**Código antes:**
+```python
+def asignar_responsable(self, id_solicitud, id_responsable):
+    s = self.buscar(id_solicitud)
+    if s == None:
+        return -1
+    ...
+    if x == None:
+        return -2
+    if s.estado == "CERRADA":
+        return -3
+    ...
+    return 1
+
+# procesar_opcion(): el menú tiene que saber qué significa cada número
+res = self.asignar_responsable(id2, idr)
+if res == 1:
+    print("Responsable asignado: ...")
+elif res == -2:
+    print("Error: no existe un responsable con ID " + idr + ".")
+elif res == -3:
+    print("Error: no se puede asignar responsable a una solicitud CERRADA.")
+else:
+    print("Error: no se pudo asignar el responsable.")
+```
+
+**Código después:**
+```python
+# modelos/excepciones.py
+class OperacionRechazadaException(Exception): ...
+class SolicitudNoEncontradaException(OperacionRechazadaException): ...
+class ResponsableNoEncontradoException(OperacionRechazadaException): ...
+class SolicitudCerradaException(OperacionRechazadaException): ...
+
+def asignar_responsable(self, id_solicitud, id_responsable):
+    s = self.buscar_existente(id_solicitud)        # lanza SolicitudNoEncontradaException
+    ...
+    if x == None:
+        raise ResponsableNoEncontradoException(id_responsable)
+    if s.estado == "CERRADA":
+        raise SolicitudCerradaException()
+    ...
+
+# procesar_opcion()
+try:
+    self.asignar_responsable(id2, idr)
+except OperacionRechazadaException as e:
+    print("Error: " + str(e))
+    return True
+print("Responsable asignado: ...")
+```
+`cambiar_estado()` devuelve `True`/`False` (cambió o ya estaba en ese estado) en lugar de `1`/`0`/`-1`,
+y `buscar()` captura solo `ValueError` en lugar de un `except:` vacío.
+
+**Justificación:** el error tiene nombre y lleva su propio mensaje, así que el menú no interpreta
+números. Para agregar un error nuevo se crea otra subclase de `OperacionRechazadaException` y el
+`except` del menú ya la cubre. Los mensajes al usuario son exactamente los mismos que antes.
+
+**Commits:** `6a122c0` (excepciones propias), `ec75ac8` (`buscar()`).
+
+**Resultado de los tests:** 79/79 en verde después de cada commit (T16 y T17 prueban los mensajes de
+asignación y T05–T09 los de cambio de estado). La salida de consola es idéntica a la del paso anterior en las 14 sesiones.
+
+**Evidencia:** `docs/evidencias/despues/despues_fabri_diff_excepciones-propias.png`,
+`docs/evidencias/despues/despues_fabri_tests_excepciones.png`.
+
+---
+
 ## Notas para futuras fases
 
 - El objeto `DatosSolicitud` podría tener métodos de validación en el futuro
