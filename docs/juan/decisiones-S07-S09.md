@@ -1,0 +1,7 @@
+
+## Juan: decisiones de refactorización efectivamente implementadas (PR #20)
+
+- **S07 — filtros:** consolidamos los recorridos en `_filtrar(obtener_valor, valor)` y conservamos cuatro entradas públicas porque son usadas por el menú y los tests de caracterización. No unificamos todas las normalizaciones: el legajo sigue comparándose exactamente, mientras estado/tipo permiten espacios y mayúsculas normalizados según la implementación original. **Alternativa descartada:** modificar el menú para utilizar directamente un filtro genérico; suponía un cambio de contrato innecesario.
+- **S08 — Move Method:** `Solicitud` calcula antigüedad y vencimiento, siempre con una fecha de referencia proporcionada desde fuera. Los métodos puente del gestor evitan romper funciones existentes. **Alternativa descartada:** usar `date.today()` desde la entidad, porque haría las pruebas dependientes de la fecha real.
+- **S09 — Extract Class:** `ReporteService` concentra los conteos y produce el texto del informe; el gestor lo imprime. **Alternativa descartada:** crear una arquitectura de reportes genérica para una aplicación sencilla de consola, por resultar innecesaria para el alcance del TPI.
+- **Verificación:** commits `89d860a`, `446d280` y `28e55a2`, asociados al [PR #20](https://github.com/gastonlell25/gestion-solicitudes/pull/20). Se conserva la batería de caracterización T10–T15 y se agregaron pruebas del modelo y del reporte. La suite final integrada de todas las ramas se verificará después de los PR #21–#23.
