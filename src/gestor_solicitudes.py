@@ -311,7 +311,7 @@ class GestorSolicitudes:
     def buscar(self, id):
         try:
             n = int(id)
-        except:
+        except ValueError:
             return None
         for i in range(len(self.lst)):
             if self.lst[i].id == n:
