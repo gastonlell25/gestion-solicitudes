@@ -8,6 +8,7 @@ from modelos.estado import Estado, EstadoInvalidoException, TransicionInvalidaEx
 from modelos.tipo_solicitud import TipoSolicitud
 from modelos.prioridad import Prioridad
 from archivo_json import ArchivoJSON
+from servicios.reporte_service import ReporteService
 
 
 # Clase principal del sistema
@@ -345,57 +346,8 @@ class GestorSolicitudes:
         print("")
 
     def reporte(self):
-        c1 = c2 = c3 = c4 = c5 = 0
-        t1 = t2 = t3 = t4 = t5 = 0
-        pa = 0
-        v = 0
-        # recorre la lista
-        for i in range(len(self.lst)):
-            x = self.lst[i]
-            if x.estado == "PENDIENTE":
-                c1 += 1
-            elif x.estado == "EN_REVISION":
-                c2 += 1
-            elif x.estado == "APROBADA":
-                c3 += 1
-            elif x.estado == "RECHAZADA":
-                c4 += 1
-            elif x.estado == "CERRADA":
-                c5 += 1
-            if x.tipo == "CERTIFICADO":
-                t1 += 1
-            elif x.tipo == "CAMBIO_COMISION":
-                t2 += 1
-            elif x.tipo == "REVISION_NOTA":
-                t3 += 1
-            elif x.tipo == "EQUIVALENCIA":
-                t4 += 1
-            elif x.tipo == "OTRO":
-                t5 += 1
-            if x.estado[0:4] == "PEND" and x.prioridad.upper() == "ALTA":
-                pa += 1
-            if self.esta_vencida(x):
-                v += 1
-        print("============ REPORTE ============")
-        print("Total de solicitudes: " + str(len(self.lst)))
-        print("")
-        print("Cantidad por estado:")
-        print("  PENDIENTE: " + str(c1))
-        print("  EN_REVISION: " + str(c2))
-        print("  APROBADA: " + str(c3))
-        print("  RECHAZADA: " + str(c4))
-        print("  CERRADA: " + str(c5))
-        print("")
-        print("Cantidad por tipo:")
-        print("  CERTIFICADO: " + str(t1))
-        print("  CAMBIO_COMISION: " + str(t2))
-        print("  REVISION_NOTA: " + str(t3))
-        print("  EQUIVALENCIA: " + str(t4))
-        print("  OTRO: " + str(t5))
-        print("")
-        print("Pendientes de prioridad ALTA: " + str(pa))
-        print("Solicitudes vencidas: " + str(v))
-        print("=================================")
+        # Se mantiene la misma salida de consola, pero el cálculo es independiente.
+        print(ReporteService.generar(self.lst, self.hoy()))
 
     def dias_desde_creacion(self, s):
         # Puente para mantener las llamadas de la consola durante la refactorización.
