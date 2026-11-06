@@ -150,68 +150,92 @@ class GestorSolicitudes:
     # registra una nueva solicitud pidiendo los datos por consola
     def registrar(self):
         print("--- Registrar solicitud ---")
-        legajo = self.leer("Legajo del estudiante: ")
-        if legajo == "":
-            print("Error: el legajo es obligatorio.")
+        legajo = self.leer_y_validar_legajo()
+        if legajo is None:
             return
-        if not legajo.isdigit():
-            print("Error: el legajo debe ser numerico.")
+        nombre, apellido, email, carrera = self.cargar_datos_estudiante(legajo)
+        if nombre is None:
             return
-        nombre = ""
-        apellido = ""
-        email = ""
-        carrera = ""
-        flag = False
-        # busca el estudiante
-        for i in range(len(self.ests)):
-            if self.ests[i].legajo == legajo:
-                flag = True
-                nombre = self.ests[i].nombre
-                apellido = self.ests[i].apellido
-                email = self.ests[i].email
-                carrera = self.ests[i].carrera
-        if flag:
-            print("Estudiante encontrado: " + apellido + ", " + nombre + " (" + carrera + ")")
-        else:
-            print("El estudiante no esta registrado. Ingrese sus datos.")
-            nombre = self.leer("Nombre: ")
-            apellido = self.leer("Apellido: ")
-            if nombre == "" or apellido == "":
-                print("Error: nombre y apellido son obligatorios.")
-                return
-            email = self.leer("Email: ")
-            if email.find("@") == -1:
-                print("Error: email invalido.")
-                return
-            carrera = self.leer("Carrera: ")
-        print("Tipos de solicitud:")
-        for i, t in enumerate(TipoSolicitud, start=1):
-            print("  " + str(i) + ". " + t.value)
-        op = self.leer("Tipo: ")
-        try:
-            tipo = TipoSolicitud.from_opcion_menu(op)
-        except ValueError:
-            print("Error: tipo invalido.")
+        tipo = self.leer_y_mapear_tipo()
+        if tipo is None:
             return
-        descripcion = self.leer("Descripcion: ")
-        if len(descripcion) == 0:
-            print("Error: la descripcion no puede estar vacia.")
+        descripcion = self.leer_y_validar_descripcion()
+        if descripcion is None:
             return
-        pd = tipo.prioridad_por_defecto()
-        prioridad_texto = self.leer("Prioridad (ALTA/MEDIA/BAJA) [Enter = " + pd.value + "]: ")
-        if prioridad_texto == "":
-            prioridad = pd
-        else:
-            try:
-                prioridad = Prioridad.from_str(prioridad_texto)
-            except ValueError:
-                print("Prioridad invalida, se usa la prioridad por defecto: " + pd.value)
-                prioridad = pd
+        prioridad = self.leer_y_validar_prioridad(tipo)
         fecha = self.hoy()
         id = self.registrar_solicitud(legajo, nombre, apellido, email, carrera, tipo.value, descripcion, prioridad.value, fecha)
         if id == -1:
             print("Error: no se pudo guardar la solicitud.")
             return
+        self.mostrar_resultado_registro(id, legajo, apellido, nombre, tipo, prioridad, fecha)
+
+    def leer_y_validar_legajo(self):
+        legajo = self.leer("Legajo del estudiante: ")
+        if legajo == "":
+            print("Error: el legajo es obligatorio.")
+            return None
+        if not legajo.isdigit():
+            print("Error: el legajo debe ser numerico.")
+            return None
+        return legajo
+
+    def cargar_datos_estudiante(self, legajo):
+        nombre = ""
+        apellido = ""
+        email = ""
+        carrera = ""
+        for i in range(len(self.ests)):
+            if self.ests[i].legajo == legajo:
+                nombre = self.ests[i].nombre
+                apellido = self.ests[i].apellido
+                email = self.ests[i].email
+                carrera = self.ests[i].carrera
+                print("Estudiante encontrado: " + apellido + ", " + nombre + " (" + carrera + ")")
+                return nombre, apellido, email, carrera
+        print("El estudiante no esta registrado. Ingrese sus datos.")
+        nombre = self.leer("Nombre: ")
+        apellido = self.leer("Apellido: ")
+        if nombre == "" or apellido == "":
+            print("Error: nombre y apellido son obligatorios.")
+            return None, None, None, None
+        email = self.leer("Email: ")
+        if email.find("@") == -1:
+            print("Error: email invalido.")
+            return None, None, None, None
+        carrera = self.leer("Carrera: ")
+        return nombre, apellido, email, carrera
+
+    def leer_y_mapear_tipo(self):
+        print("Tipos de solicitud:")
+        for i, t in enumerate(TipoSolicitud, start=1):
+            print("  " + str(i) + ". " + t.value)
+        op = self.leer("Tipo: ")
+        try:
+            return TipoSolicitud.from_opcion_menu(op)
+        except ValueError:
+            print("Error: tipo invalido.")
+            return None
+
+    def leer_y_validar_descripcion(self):
+        descripcion = self.leer("Descripcion: ")
+        if len(descripcion) == 0:
+            print("Error: la descripcion no puede estar vacia.")
+            return None
+        return descripcion
+
+    def leer_y_validar_prioridad(self, tipo):
+        pd = tipo.prioridad_por_defecto()
+        prioridad_texto = self.leer("Prioridad (ALTA/MEDIA/BAJA) [Enter = " + pd.value + "]: ")
+        if prioridad_texto == "":
+            return pd
+        try:
+            return Prioridad.from_str(prioridad_texto)
+        except ValueError:
+            print("Prioridad invalida, se usa la prioridad por defecto: " + pd.value)
+            return pd
+
+    def mostrar_resultado_registro(self, id, legajo, apellido, nombre, tipo, prioridad, fecha):
         print("")
         print("Solicitud #" + str(id) + " registrada correctamente.")
         print("  Estudiante: " + legajo + " - " + apellido + ", " + nombre)
