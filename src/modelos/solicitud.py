@@ -1,6 +1,5 @@
-# Clase Solicitud
-# el estado puede ser "P" (pendiente), "A" (aprobada) o "R" (rechazada)
 class Solicitud:
+    """Solicitud academica. El estado es uno de los valores de Estado (modelos/estado.py)."""
 
     def __init__(self, id, estudiante, tipo, descripcion, prioridad, estado, responsable, fecha_creacion, fecha_modificacion):
         self.id = id
@@ -13,11 +12,9 @@ class Solicitud:
         self.fecha_creacion = fecha_creacion
         self.fecha_modificacion = fecha_modificacion
 
-    # devuelve el estado
     def get_estado(self):
         return self.estado
 
-    # setea el estado
     def set_estado(self, estado):
         self.estado = estado
 

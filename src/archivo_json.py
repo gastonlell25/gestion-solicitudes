@@ -1,8 +1,8 @@
 import os
 
 
-# Clase para manejar la base de datos
 class ArchivoJSON:
+    """Lee y escribe el archivo de datos (data/solicitudes.json, o la ruta de ARCHIVO_DATOS)."""
 
     def __init__(self):
         self.ruta = os.environ.get("ARCHIVO_DATOS") or os.path.join(os.path.dirname(__file__), "..", "data", "solicitudes.json")

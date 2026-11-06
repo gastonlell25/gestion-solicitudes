@@ -48,7 +48,7 @@ class SolicitudRepositorioArchivo(SolicitudRepositorio):
     def descripcion_archivo(self):
         return "el archivo de datos " + str(self.archivo.ruta)
 
-    # procesa los datos
+    # convierte los diccionarios leidos del JSON en objetos del modelo
     def proc(self, data2):
         ests = []
         resp = []
@@ -76,7 +76,6 @@ class SolicitudRepositorioArchivo(SolicitudRepositorio):
             lst.append(Solicitud(x["id"], aux, x["tipo"], x["descripcion"], pri, est, rr, x["fecha_creacion"], x["fecha_modificacion"]))
         return DatosSistema(ests, resp, lst)
 
-    # guarda los datos en la base de datos
     def guardar(self, datos):
         data2 = {
             "estudiantes": datos.estudiantes,
