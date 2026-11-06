@@ -79,6 +79,8 @@ mensaje explícito.
 
 **Resultado de los tests:** 44/44 en verde después de cada uno de los 3 commits (incluye `test_gabriel_estados.py`, que prueba exactamente las 5 transiciones T05-T09).
 
+**Ajustes de la revisión de PR (Gastón):** se separó `EstadoInvalidoException` (valor que no es ninguno de los 5 estados) de `TransicionInvalidaException` (estado válido, transición no permitida), para poder capturarlas por separado. Se agregó `Estado.es_final()`, derivado de la propia tabla de transiciones (no hardcodeado contra `CERRADA`, para no romper OCP). Se agregaron 3 tests de punta a punta que faltaban: mismo estado, una regresión no cubierta por los T05-T09 (APROBADA → EN_REVISION) y un estado inválido. 75/75 en verde.
+
 ---
 
 ## 2 - Replace Magic String with Enum: TipoSolicitud y Prioridad (Gabriel)

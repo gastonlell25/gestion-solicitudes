@@ -1,6 +1,10 @@
 from enum import Enum
 
 
+class EstadoInvalidoException(ValueError):
+    """El valor no corresponde a ningun Estado conocido."""
+
+
 class TransicionInvalidaException(Exception):
     """Se lanza al intentar una transicion de estado que la solicitud no permite."""
 
@@ -18,10 +22,14 @@ class Estado(Enum):
         try:
             return cls(normalizado)
         except ValueError:
-            raise ValueError(f"Estado invalido: {valor!r}") from None
+            raise EstadoInvalidoException(f"Estado invalido: {valor!r}") from None
 
     def puede_pasar_a(self, nuevo: "Estado") -> bool:
         return nuevo in _TRANSICIONES_PERMITIDAS[self]
+
+    def es_final(self) -> bool:
+        """True si no hay ninguna transicion permitida desde este estado."""
+        return not _TRANSICIONES_PERMITIDAS[self]
 
 
 _TRANSICIONES_PERMITIDAS = {
