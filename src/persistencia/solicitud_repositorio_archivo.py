@@ -17,18 +17,36 @@ class SolicitudRepositorioArchivo(SolicitudRepositorio):
         self.archivo = archivo or ArchivoJSON()
 
     def cargar(self):
-        data2 = None
-        txt = self.archivo.leer()
-        if txt != None:
-            try:
-                data2 = json.loads(txt)
-            except:
-                pass
-        if data2 == None:
+        txt = self.leer_texto()
+        if txt is None:
+            # primera ejecucion: se crea el archivo con los datos de ejemplo
             datos = self.proc(self.datos_ejemplo())
             self.guardar(datos)
             return datos
-        return self.proc(data2)
+        # un archivo existente que no se puede interpretar nunca se reemplaza: se perderian los datos
+        try:
+            return self.proc(json.loads(txt))
+        except json.JSONDecodeError as e:
+            raise PersistenciaException(
+                self.descripcion_archivo() + " tiene un formato invalido (linea " + str(e.lineno) + ", columna " + str(e.colno) + ")"
+            ) from e
+        except KeyError as e:
+            raise PersistenciaException(
+                self.descripcion_archivo() + " tiene un formato invalido (falta el dato " + str(e) + ")"
+            ) from e
+        except TypeError as e:
+            raise PersistenciaException(
+                self.descripcion_archivo() + " tiene un formato invalido (un dato tiene un tipo incorrecto)"
+            ) from e
+
+    def leer_texto(self):
+        try:
+            return self.archivo.leer()
+        except OSError as e:
+            raise PersistenciaException("no se pudo leer " + self.descripcion_archivo() + " (" + e.strerror + ")") from e
+
+    def descripcion_archivo(self):
+        return "el archivo de datos " + str(self.archivo.ruta)
 
     # procesa los datos
     def proc(self, data2):
@@ -70,7 +88,7 @@ class SolicitudRepositorioArchivo(SolicitudRepositorio):
             self.archivo.escribir(txt + "\n")
         except OSError as e:
             raise PersistenciaException(
-                "no se pudo guardar el archivo de datos " + str(self.archivo.ruta) + " (" + e.strerror + ")"
+                "no se pudo guardar " + self.descripcion_archivo() + " (" + e.strerror + ")"
             ) from e
 
     def datos_ejemplo(self):

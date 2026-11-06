@@ -17,7 +17,7 @@ class SolicitudRepositorio(ABC):
 
     @abstractmethod
     def cargar(self) -> DatosSistema:
-        """Devuelve los datos guardados."""
+        """Devuelve los datos guardados. Lanza PersistenciaException si no se pueden leer."""
 
     @abstractmethod
     def guardar(self, datos: DatosSistema) -> None:

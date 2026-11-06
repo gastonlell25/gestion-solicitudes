@@ -24,7 +24,7 @@ class GestorSolicitudes:
             self.cargar()
         except PersistenciaException as e:
             print("Error: " + str(e) + ".")
-            print("El sistema no puede iniciar sin sus datos.")
+            print("El sistema no puede iniciar sin sus datos. El archivo no se modifico.")
             return
         flag = True
         while flag:
