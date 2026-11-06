@@ -62,6 +62,60 @@ Además hay un riesgo oculto: en reporte(), l. 394, las pendientes se detectan c
 
 **Después del refactoring** (se completa en la Fase 4): agregar un estado debería requerir modificar 2 lugares: el enum `Estado` y la definición de sus transiciones permitidas.
 
+### Costo de cambio DESPUÉS del refactoring
+
+Después de aplicar los refactorings de Fase 3, agregar el mismo estado `EN_ESPERA_DOCUMENTACION` 
+requiere modificar:
+
+| # | Archivo y lugar | Qué cambiar |
+|----|---|---|
+| 1 | `src/modelos/estado.py`, enum `Estado` | Agregar `EN_ESPERA_DOCUMENTACION = "EN_ESPERA_DOCUMENTACION"` |
+| 2 | `src/modelos/estado.py`, método `puede_pasar_a()` | Agregar reglas de transición en la tabla de transiciones |
+
+**Total: 2 lugares en 1 archivo.**
+
+### Mejora obtenida
+
+| Métrica | Antes | Después | Mejora |
+|---------|-------|---------|--------|
+| Lugares a modificar | 9 | 2 | ↓ 78% |
+| Métodos afectados | 5 | 1 | ↓ 80% |
+| Riesgo de error de tipeo | Alto | Bajo | ✅ |
+| Riesgo de inconsistencia | Alto | Nulo | ✅ |
+| Necesidad de leer lógica dispersa | Sí | No | ✅ |
+
+### Por qué mejora
+
+- **Enum centralizado:** El estado es un tipo, no un string suelto
+- **Tabla de transiciones centralizada:** Un único lugar donde definir las reglas
+- **No hay if/elif dispersos:** La lógica de validación está en un método, no repetida
+- **Sin conversiones manuales:** No hay normalizaciones variantes de mayúsculas
+- **Mejor testeabilidad:** Se puede crear un `Estado` en un test sin pasar por la consola
+
+### Cambios clave que causaron esta mejora
+
+| Refactoring | Impacto |
+|---|---|
+| Replace Conditional with Polymorphism (Gabriel, S04) | Estados centralizados en Enum con tabla de transiciones |
+| Replace Magic String with Enum (Gabriel, S05-S06) | Tipos y prioridades ya no son strings sueltos |
+| Extract Class SolicitudService (Gastón) | Lógica separada de UI; más fácil de aislar cambios |
+
+## 5. Análisis estático (Fase 4)
+
+| Métrica | Antes (estado-inicial) | Después (Fase 3) | Mejora |
+|---------|---|---|---|
+| Líneas de código (gestor) | 379 | 306 | ↓ 19% |
+| Líneas de código (servicio) | — | 130 | ✅ Nueva clase |
+| Total líneas | 379 | 436 | +15% (pero separado) |
+| Métodos (gestor) | 16 | 21 | +5 (más pequeños) |
+| Métodos (servicio) | — | 14 | ✅ Lógica pura |
+| Métodos >20 líneas (gestor) | 4 | 5 | Mejor distribuidos |
+| Variables crípticas | 8 (lst, ests, resp, aux, x) | 0 | ✅ 100% claras |
+| Duplicación de filtros | 4 métodos idénticos | 1 método `_filtrar()` | ↓ 75% |
+| Parámetros máximos en método | 9 (`registrar_solicitud`) | 2 | ↓ 78% |
+
+**Conclusión:** Aunque el código total es ligeramente más largo (+15%), está mejor distribuido entre dos clases con responsabilidades claras. El gestor pasó de 379 a 306 líneas (↓19%), y la lógica se movió a una clase testeable sin I/O. Los métodos pequeños son más fáciles de entender y mantener que pocos métodos grandes.
+
 ## 4. Conclusión
 
 La calidad externa es buena: el usuario no percibe problemas. La calidad interna es baja:
