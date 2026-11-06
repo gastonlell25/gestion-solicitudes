@@ -40,12 +40,12 @@ def test_estados_resueltos_nunca_vencen(estado):
 
 def test_filtrado_conserva_semantica_de_texto():
     gestor = GestorSolicitudes(SolicitudRepositorioArchivo())
-    gestor.lst = [solicitud(legajo="Abc"), solicitud(legajo="abc")]
-    assert gestor.filtrar_por_tipo(" certificado ") == gestor.lst
-    assert gestor.filtrar_por_estado(" pendiente ") == gestor.lst
-    assert gestor.filtrar_por_prioridad(" alta ") == gestor.lst
-    assert gestor.filtrar_por_legajo(" Abc ") == gestor.lst[:1]
-    assert gestor.filtrar_por_legajo(" ABC ") == []
+    gestor.servicio.solicitudes = [solicitud(legajo="Abc"), solicitud(legajo="abc")]
+    assert gestor.servicio.filtrar_por_tipo(" certificado ") == gestor.servicio.solicitudes
+    assert gestor.servicio.filtrar_por_estado(" pendiente ") == gestor.servicio.solicitudes
+    assert gestor.servicio.filtrar_por_prioridad(" alta ") == gestor.servicio.solicitudes
+    assert gestor.servicio.filtrar_por_legajo(" Abc ") == gestor.servicio.solicitudes[:1]
+    assert gestor.servicio.filtrar_por_legajo(" ABC ") == []
 
 
 def test_reporte_service_retorna_texto_y_no_imprime(capsys):

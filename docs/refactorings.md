@@ -620,7 +620,146 @@ diferentes, y los comentarios dicen la verdad. Si en el futuro hace falta export
 
 ---
 
+## 9 - Rename: Variables y métodos con nombres claros (Gastón)
+
+**ID:** RN-01  
+**Técnica:** Rename  
+**Smell resuelto:** S03 - Malos nombres (lst, ests, resp, aux, x, etc.)  
+**Principio:** Clean Code (nombres claros y significativos)  
+**Autor:** Gastón  
+**Rama:** `refactor/gaston-extract-class-rename`  
+**Commit:** 4e74fb2  
+
+### Descripción
+
+Se renombraron todas las variables con nombres crípticos por otros que explicitan su propósito:
+
+| Antes | Después | Contexto |
+|-------|---------|----------|
+| `self.lst` | `self.solicitudes` | Lista de solicitudes |
+| `self.ests` | `self.estudiantes` | Lista de estudiantes |
+| `self.resp` | `self.responsables` | Lista de responsables |
+| `aux` | `proximo_id` | Cálculo del próximo ID |
+| `x` | `responsable_encontrado` | Búsqueda de responsable |
+| `id2`, `s2` | `id_solicitud`, `solicitud` | Parámetros en asignación |
+| `f` | `opcion_filtro` | Opción de filtro |
+| `v` | `valor_filtro` | Valor ingresado para filtrar |
+| `idr` | `id_responsable` | ID del responsable |
+
+### Cambios
+
+- **`src/gestor_solicitudes.py`:** reemplazo de 78 referencias en 9 métodos
+- **`tests/test_juan_modelo_reporte.py`:** actualización de 1 test que accedía a `lst` directamente
+
+### Verificación
+
+- **Tests:** 94/94 pasan ✅
+- **Comportamiento externo:** idéntico (mismo input → misma output)
+
+### Beneficios
+
+- **Legibilidad:** el código se entiende sin necesidad de comentarios
+- **Mantenibilidad:** cambios futuros son más seguros (no confundir `lst` con `ests`)
+- **Depuración:** los nombres de variables en stack traces son significativos
+
+---
+
+## 10 - Extract Class: SolicitudService (Gastón)
+
+**ID:** EC-01  
+**Técnica:** Extract Class  
+**Smell resuelto:** S01 (God Class parcial) - separar UI de lógica de negocio  
+**Principio:** SRP - Single Responsibility Principle  
+**Autor:** Gastón  
+**Rama:** `refactor/gaston-extract-class-rename`  
+**Commit:** 0677b6b  
+
+### Descripción
+
+Se extrajo la lógica pura de negocio de `GestorSolicitudes` a una nueva clase `SolicitudService`:
+
+**Antes:** `GestorSolicitudes` hacía TODO (menú, lectura, validaciones, registros, búsquedas, persistencia).
+
+**Después:**
+- **`SolicitudService`** (src/servicios/solicitud_service.py): lógica transaccional
+  - Registrar, cambiar estado, asignar responsable
+  - Filtrados y búsquedas
+  - Acceso a datos (cargar/guardar)
+  
+- **`GestorSolicitudes`**: coordinador + UI
+  - Menú interactivo
+  - Lectura y validación de entrada
+  - Presentación de resultados
+  - Delegación a `SolicitudService`
+
+### Cambios
+
+- **`src/servicios/solicitud_service.py`**: +180 líneas (nueva clase)
+- **`src/gestor_solicitudes.py`**: −140 líneas (ahora es coordinador, no God Class)
+- **`tests/test_juan_modelo_reporte.py`**: +2 líneas (acceso a `gestor.servicio`)
+
+### Código antes/después
+
+```python
+# Antes: todo mezclado
+class GestorSolicitudes:
+    def __init__(self, repositorio):
+        self.lst = []
+        self.ests = []
+        self.responder()
+        
+    def registrar(self):              # UI + validación + lógica
+        legajo = self.leer(...)       # consola
+        if not legajo.isdigit():      # validación
+            return
+        est = None
+        for i in range(len(self.ests)): # búsqueda
+            if self.ests[i].legajo == legajo:
+                est = self.ests[i]
+        ...
+
+# Después: separado
+class SolicitudService:
+    def registrar_solicitud(self, legajo, nombre, ...):
+        estudiante = self._buscar_estudiante(legajo)
+        if estudiante is None:
+            estudiante = Estudiante(legajo, ...)
+            self.estudiantes.append(estudiante)
+        proximo_id = self._calcular_proximo_id()
+        ...
+
+class GestorSolicitudes:
+    def __init__(self, repositorio):
+        self.servicio = SolicitudService(repositorio)
+        
+    def registrar(self):
+        legajo = self.leer_y_validar_legajo()
+        if legajo is None: return
+        nombre, ... = self.cargar_datos_estudiante(legajo)
+        if nombre is None: return
+        ...
+        id_solicitud = self.servicio.registrar_solicitud(...)
+```
+
+### Verificación
+
+- **Tests:** 94/94 pasan ✅
+- **Comportamiento:** idéntico a través de la consola
+- **Acoplamiento:** `GestorSolicitudes` es ahora un cliente de `SolicitudService`, no una super clase
+
+### Beneficios
+
+- **SRP:** cada clase tiene una única razón para cambiar
+  - `SolicitudService` cambia si la lógica de negocio cambia
+  - `GestorSolicitudes` cambia si el formato de UI cambia
+- **Testabilidad:** `SolicitudService` se puede probar sin consola (ya lo hace `test_fabri_repositorio.py`)
+- **Extensibilidad:** agregar otra UI (web, API REST) solo requiere crear otra clase que use `SolicitudService`
+- **Mantenibilidad:** 240 líneas de lógica pura vs. 320 líneas de lógica + UI
+
+---
+
 ## Notas para futuras fases
 
 - El objeto `DatosSolicitud` podría tener métodos de validación en el futuro
 - Combinado con Extract Method, la lógica de registro es mucho más clara
+- `SolicitudService` es el punto donde agregar casos de uso nuevos sin tocar UI
