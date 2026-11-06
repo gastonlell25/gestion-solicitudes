@@ -66,3 +66,19 @@ fecha real ni tocar `data/solicitudes.json`.
 | T17 | Asignar responsable | Asignar un responsable inexistente | Solicitud #1; menú: opción 3, ID 1, responsable 9 | `Error: no existe un responsable con ID 9.`; el responsable de la #1 no cambia en el archivo | Pasa | Pendiente (Fase 4) | Fabri |
 | T18 | Persistencia | Guardar y volver a cargar | Sesión 1: registra la #11 (legajo 10003, tipo 4, descripción, prioridad por defecto), le asigna el responsable 2 y sale; sesión 2 (mismo archivo): opción 6 | Se lista `#11 [PENDIENTE] EQUIVALENCIA - Prioridad: MEDIA` con `Responsable: Martin Ferreyra (Secretaria Academica)`; `Total: 11 solicitud(es).` | Pasa | Pendiente (Fase 4) | Fabri |
 | T19 | Persistencia | Archivo de datos inexistente | `ARCHIVO_DATOS` apunta a un archivo que no existe; menú: opción 6 | Se cargan los datos de ejemplo (`Total: 10 solicitud(es).`) y se crea el archivo con 10 solicitudes | Pasa | Pendiente (Fase 4) | Fabri |
+
+## Bugs del sistema base encontrados (Fabri, S11)
+
+Al diagnosticar S11 se encontraron dos bugs reales en `estado-inicial`. No los detectan T01–T19
+porque esos tests prueban el comportamiento esperado con un archivo de datos sano.
+
+| Bug | Cómo se reproduce | Resultado en `estado-inicial` | Decisión y resultado en la versión refactorizada |
+| --- | --- | --- | --- |
+| Pérdida silenciosa de datos | El archivo de datos existe pero tiene JSON inválido (por ejemplo, `{ esto no es json`) y se abre el sistema | El sistema arranca con los 10 datos de ejemplo y **sobrescribe el archivo**; se pierde lo que había, sin aviso | Se corrige en el refactoring de S11 (ficha 7): se informa `Error: el archivo de datos ... tiene un formato invalido (linea 1, columna 3).`, el sistema no arranca y el archivo **no se modifica**. Solo se generan los datos de ejemplo si el archivo no existe (T19 sigue igual) |
+| Éxito falso al no poder guardar | El archivo es de solo lectura y se asigna un responsable o se cambia un estado | Se muestra `Error: [Errno 13] Permission denied: '...'` y a continuación `Responsable asignado: ...` (o `Estado actualizado: ...`). El cambio queda en memoria y se guarda en la próxima operación que funcione | Se corrige en el refactoring de S11 (ficha 7): `Error: no se pudo guardar el archivo de datos ... (Permission denied). La operacion no se guardo.`, sin mensaje de éxito, y se vuelve al último estado guardado |
+
+Los dos cambios son **mejoras intencionales** del comportamiento externo, a confirmar por el grupo
+en la revisión del PR. Los prueba `tests/test_fabri_errores.py`, y sus dos tests de punta a punta
+fallan sobre `estado-inicial`. Capturas: `docs/evidencias/antes/antes_fabri_archivo-danado.png` /
+`docs/evidencias/despues/despues_fabri_archivo-danado.png` y `antes_fabri_guardado-fallido.png` /
+`despues_fabri_guardado-fallido.png`.
