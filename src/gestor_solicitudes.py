@@ -1,28 +1,38 @@
 import os
-import json
 import datetime
 from modelos.estudiante import Estudiante
-from modelos.responsable import Responsable
 from modelos.solicitud import Solicitud
 from modelos.estado import Estado, EstadoInvalidoException, TransicionInvalidaException
 from modelos.tipo_solicitud import TipoSolicitud
 from modelos.prioridad import Prioridad
-from archivo_json import ArchivoJSON
+from modelos.excepciones import (
+    OperacionRechazadaException,
+    ResponsableNoEncontradoException,
+    SolicitudCerradaException,
+    SolicitudNoEncontradaException,
+)
+from persistencia.datos_sistema import DatosSistema
+from persistencia.solicitud_repositorio import PersistenciaException, SolicitudRepositorio
 from servicios.reporte_service import ReporteService
 
 
 # Clase principal del sistema
 class GestorSolicitudes:
 
-    def __init__(self):
+    def __init__(self, repositorio: SolicitudRepositorio):
         self.lst = []   # solicitudes
         self.ests = []  # estudiantes
         self.resp = []  # responsables
-        self.archivo = ArchivoJSON()
+        self.repositorio = repositorio
         self.fin = False
 
     def iniciar(self):
-        self.cargar()
+        try:
+            self.cargar()
+        except PersistenciaException as e:
+            print("Error: " + str(e) + ".")
+            print("El sistema no puede iniciar sin sus datos. El archivo no se modifico.")
+            return
         flag = True
         while flag:
             self.mostrar_menu()
@@ -30,7 +40,12 @@ class GestorSolicitudes:
             if self.fin:
                 print("")
                 op = "0"
-            flag = self.procesar_opcion(op)
+            try:
+                flag = self.procesar_opcion(op)
+            except PersistenciaException as e:
+                print("Error: " + str(e) + ". La operacion no se guardo.")
+                # vuelve al ultimo estado guardado para no persistir despues un cambio que el usuario vio fallar
+                self.cargar()
             print("")
 
     def mostrar_menu(self):
@@ -68,19 +83,17 @@ class GestorSolicitudes:
             nuevo = nuevo.upper().replace(" ", "_")
             anterior = s.get_estado()
             try:
-                r = self.cambiar_estado(id, nuevo)
+                cambio = self.cambiar_estado(id, nuevo)
             except EstadoInvalidoException:
                 print("Error: estado invalido.")
                 return True
-            except TransicionInvalidaException as e:
+            except (OperacionRechazadaException, TransicionInvalidaException) as e:
                 print("Error: " + str(e))
                 return True
-            if r == 1:
+            if cambio:
                 print("Estado actualizado: " + anterior + " -> " + nuevo)
-            elif r == 0:
-                print("La solicitud ya se encuentra en estado " + nuevo + ".")
             else:
-                print("Error: no existe una solicitud con ID " + id + ".")
+                print("La solicitud ya se encuentra en estado " + nuevo + ".")
         elif op == "3":
             print("--- Asignar responsable ---")
             id2 = self.leer("ID de la solicitud: ")
@@ -92,16 +105,13 @@ class GestorSolicitudes:
             for i in range(len(self.resp)):
                 print("  " + str(self.resp[i].id) + " - " + self.resp[i].nombre + " (" + self.resp[i].area + ")")
             idr = self.leer("ID del responsable: ")
-            res = self.asignar_responsable(id2, idr)
-            if res == 1:
-                rr = s2.get_responsable()
-                print("Responsable asignado: " + rr.nombre + " (" + rr.area + ") -> solicitud #" + str(s2.id))
-            elif res == -2:
-                print("Error: no existe un responsable con ID " + idr + ".")
-            elif res == -3:
-                print("Error: no se puede asignar responsable a una solicitud CERRADA.")
-            else:
-                print("Error: no se pudo asignar el responsable.")
+            try:
+                self.asignar_responsable(id2, idr)
+            except OperacionRechazadaException as e:
+                print("Error: " + str(e))
+                return True
+            rr = s2.get_responsable()
+            print("Responsable asignado: " + rr.nombre + " (" + rr.area + ") -> solicitud #" + str(s2.id))
         elif op == "4":
             print("--- Buscar / filtrar solicitudes ---")
             print("Filtrar por:")
@@ -169,9 +179,6 @@ class GestorSolicitudes:
         prioridad = self.leer_y_validar_prioridad(tipo)
         fecha = self.hoy()
         id = self.registrar_solicitud(legajo, nombre, apellido, email, carrera, tipo.value, descripcion, prioridad.value, fecha)
-        if id == -1:
-            print("Error: no se pudo guardar la solicitud.")
-            return
         self.mostrar_resultado_registro(id, legajo, apellido, nombre, tipo, prioridad, fecha)
 
     def leer_y_validar_legajo(self):
@@ -263,19 +270,16 @@ class GestorSolicitudes:
                 aux = self.lst[i].id
         s = Solicitud(aux + 1, est, tipo, descripcion, prioridad, "PENDIENTE", None, fecha, fecha)
         self.lst.append(s)
-        if not self.guardar():
-            return -1
+        self.guardar()
         return s.id
 
-    # devuelve True si se pudo cambiar el estado
+    # devuelve False si la solicitud ya estaba en ese estado (no es un error)
     def cambiar_estado(self, id, nuevo):
-        s = self.buscar(id)
-        if s == None:
-            return -1
+        s = self.buscar_existente(id)
         nuevo_estado = Estado.from_str(nuevo)
         actual_estado = Estado.from_str(s.get_estado())
         if actual_estado == nuevo_estado:
-            return 0
+            return False
         if not actual_estado.puede_pasar_a(nuevo_estado):
             raise TransicionInvalidaException(
                 "no se puede pasar de " + actual_estado.value + " a " + nuevo_estado.value + "."
@@ -283,29 +287,32 @@ class GestorSolicitudes:
         s.set_estado(nuevo_estado.value)
         s.set_fecha_modificacion(self.hoy())
         self.guardar()
-        return 1
+        return True
 
     def asignar_responsable(self, id_solicitud, id_responsable):
-        s = self.buscar(id_solicitud)
-        if s == None:
-            return -1
+        s = self.buscar_existente(id_solicitud)
         x = None
         for i in range(len(self.resp)):
             if str(self.resp[i].id) == id_responsable:
                 x = self.resp[i]
         if x == None:
-            return -2
+            raise ResponsableNoEncontradoException(id_responsable)
         if s.estado == "CERRADA":
-            return -3
+            raise SolicitudCerradaException()
         s.set_responsable(x)
         s.set_fecha_modificacion(self.hoy())
         self.guardar()
-        return 1
+
+    def buscar_existente(self, id):
+        s = self.buscar(id)
+        if s is None:
+            raise SolicitudNoEncontradaException(id)
+        return s
 
     def buscar(self, id):
         try:
             n = int(id)
-        except:
+        except ValueError:
             return None
         for i in range(len(self.lst)):
             if self.lst[i].id == n:
@@ -361,104 +368,11 @@ class GestorSolicitudes:
             return os.environ.get("FECHA_HOY")
         return datetime.date.today().strftime("%Y-%m-%d")
 
-    def validar_email(self, email):
-        if email == None or email == "":
-            return False
-        partes = email.split("@")
-        if len(partes) != 2:
-            return False
-        if partes[1].find(".") == -1:
-            return False
-        return True
-
-    # exporta las solicitudes a un csv para mandarle a alumnado
-    def exportar_csv(self, ruta):
-        txt = "id;legajo;tipo;prioridad;estado;fecha\n"
-        for i in range(len(self.lst)):
-            x = self.lst[i]
-            txt += str(x.id) + ";" + x.estudiante.legajo + ";" + x.tipo + ";" + x.prioridad + ";" + x.estado + ";" + x.fecha_creacion + "\n"
-        try:
-            f = open(ruta, "w")
-            f.write(txt)
-            f.close()
-        except:
-            pass
-
     def cargar(self):
-        data2 = None
-        txt = self.archivo.leer()
-        if txt != None:
-            try:
-                data2 = json.loads(txt)
-            except:
-                pass
-        if data2 == None:
-            data2 = self.datos_ejemplo()
-            self.proc(data2)
-            self.guardar()
-        else:
-            self.proc(data2)
+        datos = self.repositorio.cargar()
+        self.ests = datos.estudiantes
+        self.resp = datos.responsables
+        self.lst = datos.solicitudes
 
-    # procesa los datos
-    def proc(self, data2):
-        self.ests = []
-        self.resp = []
-        self.lst = []
-        for e in data2["estudiantes"]:
-            self.ests.append(Estudiante(e["legajo"], e["nombre"], e["apellido"], e["email"], e["carrera"]))
-        for r in data2["responsables"]:
-            self.resp.append(Responsable(r["id"], r["nombre"], r["area"]))
-        for x in data2["solicitudes"]:
-            # los datos pueden venir con variantes de mayusculas/minusculas; Estado y
-            # Prioridad las normalizan, y si no reconocen el valor lo dejan como esta
-            try:
-                est = Estado.from_str(x["estado"]).value
-            except ValueError:
-                est = x["estado"]
-            try:
-                pri = Prioridad.from_str(x["prioridad"]).value
-            except ValueError:
-                pri = x["prioridad"]
-            e = x["estudiante"]
-            aux = Estudiante(e["legajo"], e["nombre"], e["apellido"], e["email"], e["carrera"])
-            rr = None
-            if x["responsable"] != None:
-                rr = Responsable(x["responsable"]["id"], x["responsable"]["nombre"], x["responsable"]["area"])
-            self.lst.append(Solicitud(x["id"], aux, x["tipo"], x["descripcion"], pri, est, rr, x["fecha_creacion"], x["fecha_modificacion"]))
-
-    # guarda los datos en la base de datos
     def guardar(self):
-        data2 = {
-            "estudiantes": self.ests,
-            "responsables": self.resp,
-            "solicitudes": self.lst
-        }
-        txt = json.dumps(data2, default=lambda o: o.__dict__, indent=2, ensure_ascii=False)
-        return self.archivo.escribir(txt + "\n")
-
-    def datos_ejemplo(self):
-        e = [
-            {"legajo": "10001", "nombre": "Lucia", "apellido": "Benitez", "email": "lucia.benitez@alumnos.ejemplo.edu", "carrera": "Tecnicatura Universitaria en Programacion"},
-            {"legajo": "10002", "nombre": "Tomas", "apellido": "Aguirre", "email": "tomas.aguirre@alumnos.ejemplo.edu", "carrera": "Tecnicatura Universitaria en Programacion"},
-            {"legajo": "10003", "nombre": "Camila", "apellido": "Rios", "email": "camila.rios@alumnos.ejemplo.edu", "carrera": "Ingenieria en Sistemas de Informacion"},
-            {"legajo": "10004", "nombre": "Joaquin", "apellido": "Medina", "email": "joaquin.medina@alumnos.ejemplo.edu", "carrera": "Tecnicatura Universitaria en Programacion"},
-            {"legajo": "10005", "nombre": "Sofia", "apellido": "Navarro", "email": "sofia.navarro@alumnos.ejemplo.edu", "carrera": "Ingenieria en Sistemas de Informacion"}
-        ]
-        r = [
-            {"id": 1, "nombre": "Laura Quiroga", "area": "Alumnado"},
-            {"id": 2, "nombre": "Martin Ferreyra", "area": "Secretaria Academica"},
-            {"id": 3, "nombre": "Paula Dominguez", "area": "Bedelia"}
-        ]
-        s = [
-            {"id": 1, "estudiante": e[0], "tipo": "CERTIFICADO", "descripcion": "Certificado de alumno regular para presentar en el trabajo", "prioridad": "BAJA", "estado": "PENDIENTE", "responsable": None, "fecha_creacion": "2026-10-20", "fecha_modificacion": "2026-10-20"},
-            {"id": 2, "estudiante": e[1], "tipo": "CAMBIO_COMISION", "descripcion": "Cambio de comision de Programacion II por superposicion horaria", "prioridad": "ALTA", "estado": "EN_REVISION", "responsable": r[1], "fecha_creacion": "2026-10-22", "fecha_modificacion": "2026-10-24"},
-            {"id": 3, "estudiante": e[2], "tipo": "REVISION_NOTA", "descripcion": "Revision de nota del segundo parcial de Matematica", "prioridad": "ALTA", "estado": "pendiente", "responsable": None, "fecha_creacion": "2026-10-28", "fecha_modificacion": "2026-10-28"},
-            {"id": 4, "estudiante": e[3], "tipo": "EQUIVALENCIA", "descripcion": "Equivalencia de Algebra aprobada en otra universidad", "prioridad": "MEDIA", "estado": "APROBADA", "responsable": r[1], "fecha_creacion": "2026-09-15", "fecha_modificacion": "2026-10-05"},
-            {"id": 5, "estudiante": e[4], "tipo": "CERTIFICADO", "descripcion": "Certificado analitico parcial", "prioridad": "BAJA", "estado": "CERRADA", "responsable": r[0], "fecha_creacion": "2026-09-01", "fecha_modificacion": "2026-09-10"},
-            {"id": 6, "estudiante": e[0], "tipo": "REVISION_NOTA", "descripcion": "Revision de nota del trabajo practico de Bases de Datos", "prioridad": "Alta", "estado": "PENDIENTE", "responsable": None, "fecha_creacion": "2026-10-21", "fecha_modificacion": "2026-10-21"},
-            {"id": 7, "estudiante": e[1], "tipo": "OTRO", "descripcion": "Constancia de examen para presentar en el trabajo", "prioridad": "BAJA", "estado": "RECHAZADA", "responsable": r[2], "fecha_creacion": "2026-10-01", "fecha_modificacion": "2026-10-03"},
-            {"id": 8, "estudiante": e[2], "tipo": "CAMBIO_COMISION", "descripcion": "Cambio de comision de Ingles I al turno noche", "prioridad": "ALTA", "estado": "PENDIENTE", "responsable": r[2], "fecha_creacion": "2026-10-29", "fecha_modificacion": "2026-10-29"},
-            {"id": 9, "estudiante": e[3], "tipo": "EQUIVALENCIA", "descripcion": "Equivalencia de Programacion I por titulo terciario", "prioridad": "MEDIA", "estado": "EN_REVISION", "responsable": r[1], "fecha_creacion": "2026-10-10", "fecha_modificacion": "2026-10-15"},
-            {"id": 10, "estudiante": e[4], "tipo": "CERTIFICADO", "descripcion": "Certificado de examen final rendido", "prioridad": "media", "estado": "PENDIENTE", "responsable": None, "fecha_creacion": "2026-10-26", "fecha_modificacion": "2026-10-26"}
-        ]
-        return {"estudiantes": e, "responsables": r, "solicitudes": s}
+        self.repositorio.guardar(DatosSistema(self.ests, self.resp, self.lst))

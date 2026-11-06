@@ -62,15 +62,42 @@
 - **Qué se propone:** aplicar Extract Class y mover `cargar()`, `proc()`, `guardar()` y `datos_ejemplo()`, junto con `ArchivoJSON`, a una clase `SolicitudRepositorioArchivo`. Después, Introduce Interface: definir `SolicitudRepositorio` (clase abstracta con `abc`) con solo las operaciones que usa el servicio, y que el servicio la reciba por constructor; `main.py` arma las dependencias. Para ISP, la interfaz queda chica y específica; si al implementarla aparecen clientes que solo leen o solo escriben, se separa en una interfaz de lectura y otra de escritura.
 - **Por qué:** cambiar la forma de guardar no toca la lógica, y los tests pueden usar un archivo temporal o un repositorio en memoria. Además achica la God Class antes de los refactorings de Gaston y Juan, que es el orden de merge acordado.
 
+- **Qué se decidió (Fase 3):**
+  - `SolicitudRepositorioArchivo` (`src/persistencia/`) recibe todo lo que el gestor hacía con el archivo: leer, convertir el JSON en objetos, guardar y generar los datos de ejemplo.
+  - El gestor recibe un `SolicitudRepositorio` por constructor y `main.py` arma las dependencias.
+  - Los datos viajan en un solo objeto, `DatosSistema` (dataclass con estudiantes, responsables y solicitudes). Así la interfaz no crece cada vez que se agrega una colección.
+- **DIP:** antes, `GestorSolicitudes` (alto nivel) creaba `ArchivoJSON()` (bajo nivel) y conocía el formato del JSON. Ahora los dos dependen de la abstracción `SolicitudRepositorio`. Prueba de que funciona: `tests/test_fabri_repositorio.py` usa el gestor con un repositorio en memoria, sin archivo.
+- **ISP:** la interfaz tiene solo `cargar()` y `guardar()`, las dos operaciones que usa su único cliente (el gestor). No se separó en una interfaz de lectura y otra de escritura porque no hay ningún cliente que use solo una de las dos: separarla agregaría una abstracción sin uso (YAGNI). Si aparece uno (por ejemplo, un reporte de solo lectura), se separa.
+- **Alternativas consideradas:**
+  - Un repositorio con operaciones por entidad (`buscar(id)`, `agregar(solicitud)`, `listar()`…): es más fino, pero obligaba a reescribir la lógica de búsqueda y de generación de IDs, que es del área de Gaston, y mezclaba el refactor con cambios de comportamiento. Se eligió el contrato que el sistema ya usaba (cargar todo al inicio y guardar todo después de cada cambio).
+  - Usar `typing.Protocol` en vez de `abc.ABC`: también cumple DIP, pero `ABC` hace explícito el contrato y falla al instanciar una implementación incompleta, algo más fácil de mostrar y de explicar.
+- **Orden de los commits:** primero se movió el código tal cual (Extract Class, con la salida de consola idéntica) y después se agregó la interfaz. Los `except:` vacíos quedaron como estaban; se corrigen en el refactoring de S11, para no mezclar cambios.
+
 ### S11 - Manejo de errores pobre
 - **Qué viola:** las reglas de Clean Code de manejo de errores: usar excepciones en lugar de códigos de retorno, no ignorar errores con `except:` vacíos y no mezclar la presentación (`print`) con el acceso a datos. Además hay un bug real: si `data/solicitudes.json` está dañado, se pisa con los datos de ejemplo y se pierden los datos.
 - **Qué se propone:** crear excepciones propias (`SolicitudNoEncontradaException`, `ResponsableNoEncontradoException`, `PersistenciaException`; el nombre `TransicionInvalidaException` se coordina con Gabriel). El repositorio captura solo excepciones específicas (`FileNotFoundError`, `json.JSONDecodeError`, `OSError`) y las convierte en `PersistenciaException`; solo la consola muestra mensajes. Si el archivo no existe se siguen generando los datos de ejemplo (comportamiento actual), pero si existe y está dañado se informa el error y no se sobrescribe. Ese cambio de comportamiento se registra como mejora intencional y se decide en grupo en `docs/pruebas.md`.
 - **Alternativas consideradas:** mantener los códigos pero con constantes con nombre (`RESPONSABLE_INEXISTENTE = -2`). Se descarta porque el error se sigue pudiendo ignorar sin que nadie se entere.
 - **Por qué:** un error no puede pasar desapercibido, el mensaje al usuario es claro y siempre igual, y agregar un error nuevo no obliga a tocar cada `if` del menú.
 
+- **Qué se decidió (Fase 3):**
+  - **Errores de persistencia:** `PersistenciaException` se define junto a la interfaz `SolicitudRepositorio`, porque es parte de su contrato. `ArchivoJSON` solo maneja el caso esperado (`FileNotFoundError` → el archivo todavía no existe) y deja pasar el resto. El repositorio traduce `OSError`, `json.JSONDecodeError`, `KeyError` y `TypeError` a `PersistenciaException`, con un mensaje para el usuario.
+  - **Dónde se muestran:** la consola los captura en un solo lugar. En `iniciar()`, al cargar, el sistema no arranca y avisa que el archivo no se modificó. En el bucle del menú, al guardar, muestra el error y recarga el último estado guardado, para no persistir después un cambio que el usuario vio fallar.
+  - **Errores de reglas:** `src/modelos/excepciones.py` define `OperacionRechazadaException` como base de `SolicitudNoEncontradaException`, `ResponsableNoEncontradoException` y `SolicitudCerradaException`. Cada una lleva su mensaje y el menú hace `print("Error: " + str(e))`, igual que con `TransicionInvalidaException` de Gabriel. Se coordinó no mover las excepciones de Gabriel, que siguen en `modelos/estado.py`.
+- **Comportamiento que cambia (mejora intencional):** archivo dañado y guardado fallido; están detallados en `docs/pruebas.md` → "Bugs del sistema base encontrados". El resto de los mensajes al usuario quedó igual, letra por letra.
+- **Alternativas consideradas:**
+  - Que `ArchivoJSON` lance directamente `PersistenciaException`: se descartó porque `ArchivoJSON` no conoce el formato. Solo el repositorio puede distinguir "archivo dañado" de "no se pudo leer".
+  - Deshacer el cambio con la técnica de "copiar y restaurar" cada objeto antes de modificarlo: más código en cada operación. Recargar desde el repositorio deja el sistema en el último estado guardado con una sola línea.
+  - Una única excepción genérica con un código adentro: volvía a obligar al menú a interpretar códigos.
+- **Caso no cubierto (mejora pendiente):** el guardado falla y, además, el archivo fue borrado mientras el sistema estaba abierto. La recarga intenta recrearlo con los datos de ejemplo, vuelve a fallar y el programa termina con un error técnico. Se deja así por ser un caso extremo.
+
 ### S12 - Código muerto y comentarios desactualizados
 - **Qué viola:** las reglas de Clean Code de no dejar código muerto y de que los comentarios expliquen el "por qué" y sean verdaderos.
 - **Qué se propone:** aplicar Remove Dead Code: borrar `exportar_csv()` (si en el futuro hace falta exportar, se recupera del historial de Git), los getters y setters sin uso y las ramas `elif ... pass`. Con `validar_email()` se decide junto con Gaston (área de registro): si `registrar()` pasa a usarla, cambia el comportamiento y se documenta como mejora intencional; si no, se borra. Comentarios: eliminar los que repiten el código y corregir o eliminar los falsos (estados "P/A/R", "devuelve True", "base de datos").
 - **Por qué:** hay menos código para leer y mantener, y los comentarios dejan de dar información equivocada.
-
-
+- **Qué se decidió (Fase 3):**
+  - Se borraron `exportar_csv()`, `validar_email()` y los 7 getters y setters sin uso.
+  - Con `validar_email()` (área de registro, de Gaston) se eligió borrarlo y no conectarlo a `registrar()`: conectarlo cambiaba qué emails se aceptan (por ejemplo, `a@b` dejaría de ser válido), y eso es una regla de negocio, no un refactoring. Si el grupo quiere esa validación más estricta, se agrega como mejora con su test.
+  - Se mantuvieron los accesores que sí se usan (`get_estado`, `set_estado`, `get_responsable`, `set_responsable`, `get_fecha_creacion`, `set_fecha_modificacion`).
+  - `proc()` conserva su nombre: lo renombra Gaston (S03).
+  - Los comentarios de `iniciar()`, `leer()` y `registrar()` quedan para el Extract Class de consola de Gaston. El de `reporte()` desaparece con el `ReporteService` de Juan.
+- **Alternativas consideradas:** comentar el código en lugar de borrarlo. Se descartó porque es otra forma de código muerto: el historial de Git ya guarda la versión anterior.

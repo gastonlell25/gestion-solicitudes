@@ -9,6 +9,7 @@ import pytest
 from gestor_solicitudes import GestorSolicitudes
 from modelos.estudiante import Estudiante
 from modelos.solicitud import Solicitud
+from persistencia.solicitud_repositorio_archivo import SolicitudRepositorioArchivo
 from servicios.reporte_service import ReporteService
 
 
@@ -38,7 +39,7 @@ def test_estados_resueltos_nunca_vencen(estado):
 
 
 def test_filtrado_conserva_semantica_de_texto():
-    gestor = GestorSolicitudes()
+    gestor = GestorSolicitudes(SolicitudRepositorioArchivo())
     gestor.lst = [solicitud(legajo="Abc"), solicitud(legajo="abc")]
     assert gestor.filtrar_por_tipo(" certificado ") == gestor.lst
     assert gestor.filtrar_por_estado(" pendiente ") == gestor.lst

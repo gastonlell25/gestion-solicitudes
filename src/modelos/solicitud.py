@@ -1,6 +1,5 @@
-# Clase Solicitud
-# el estado puede ser "P" (pendiente), "A" (aprobada) o "R" (rechazada)
 class Solicitud:
+    """Solicitud academica. El estado es uno de los valores de Estado (modelos/estado.py)."""
 
     def __init__(self, id, estudiante, tipo, descripcion, prioridad, estado, responsable, fecha_creacion, fecha_modificacion):
         self.id = id
@@ -30,29 +29,9 @@ class Solicitud:
         # Prioridad no reconocida sigue sin estar vencida, como en el original.
         return self.prioridad in plazos and dias > plazos[self.prioridad]
 
-    def get_id(self):
-        return self.id
-
-    def get_estudiante(self):
-        return self.estudiante
-
-    def get_tipo(self):
-        return self.tipo
-
-    def get_descripcion(self):
-        return self.descripcion
-
-    def get_prioridad(self):
-        return self.prioridad
-
-    def set_prioridad(self, prioridad):
-        self.prioridad = prioridad
-
-    # devuelve el estado
     def get_estado(self):
         return self.estado
 
-    # setea el estado
     def set_estado(self, estado):
         self.estado = estado
 
@@ -64,9 +43,6 @@ class Solicitud:
 
     def get_fecha_creacion(self):
         return self.fecha_creacion
-
-    def get_fecha_modificacion(self):
-        return self.fecha_modificacion
 
     def set_fecha_modificacion(self, fecha):
         self.fecha_modificacion = fecha
