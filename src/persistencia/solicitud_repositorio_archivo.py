@@ -7,9 +7,10 @@ from modelos.prioridad import Prioridad
 from modelos.responsable import Responsable
 from modelos.solicitud import Solicitud
 from persistencia.datos_sistema import DatosSistema
+from persistencia.solicitud_repositorio import SolicitudRepositorio
 
 
-class SolicitudRepositorioArchivo:
+class SolicitudRepositorioArchivo(SolicitudRepositorio):
     """Guarda y recupera estudiantes, responsables y solicitudes en un archivo JSON."""
 
     def __init__(self, archivo=None):

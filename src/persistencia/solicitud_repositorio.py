@@ -1,0 +1,20 @@
+from abc import ABC, abstractmethod
+
+from persistencia.datos_sistema import DatosSistema
+
+
+class SolicitudRepositorio(ABC):
+    """Lo único que el gestor necesita de la persistencia: recuperar y guardar los datos.
+
+    El gestor depende de esta abstracción y no de un archivo concreto (DIP). Tiene solo
+    las dos operaciones que el gestor usa (ISP): no expone rutas, formatos ni detalles
+    del almacenamiento.
+    """
+
+    @abstractmethod
+    def cargar(self) -> DatosSistema:
+        """Devuelve los datos guardados."""
+
+    @abstractmethod
+    def guardar(self, datos: DatosSistema) -> bool:
+        """Guarda los datos. Devuelve False si no se pudieron guardar."""

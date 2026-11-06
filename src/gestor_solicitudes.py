@@ -6,17 +6,17 @@ from modelos.estado import Estado, EstadoInvalidoException, TransicionInvalidaEx
 from modelos.tipo_solicitud import TipoSolicitud
 from modelos.prioridad import Prioridad
 from persistencia.datos_sistema import DatosSistema
-from persistencia.solicitud_repositorio_archivo import SolicitudRepositorioArchivo
+from persistencia.solicitud_repositorio import SolicitudRepositorio
 
 
 # Clase principal del sistema
 class GestorSolicitudes:
 
-    def __init__(self):
+    def __init__(self, repositorio: SolicitudRepositorio):
         self.lst = []   # solicitudes
         self.ests = []  # estudiantes
         self.resp = []  # responsables
-        self.repositorio = SolicitudRepositorioArchivo()
+        self.repositorio = repositorio
         self.fin = False
 
     def iniciar(self):
