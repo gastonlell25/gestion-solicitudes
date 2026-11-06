@@ -20,9 +20,9 @@ from servicios.reporte_service import ReporteService
 class GestorSolicitudes:
 
     def __init__(self, repositorio: SolicitudRepositorio):
-        self.lst = []   # solicitudes
-        self.ests = []  # estudiantes
-        self.resp = []  # responsables
+        self.solicitudes = []
+        self.estudiantes = []
+        self.responsables = []
         self.repositorio = repositorio
         self.fin = False
 
@@ -96,22 +96,22 @@ class GestorSolicitudes:
                 print("La solicitud ya se encuentra en estado " + nuevo + ".")
         elif op == "3":
             print("--- Asignar responsable ---")
-            id2 = self.leer("ID de la solicitud: ")
-            s2 = self.buscar(id2)
-            if s2 == None:
-                print("Error: no existe una solicitud con ID " + id2 + ".")
+            id_solicitud = self.leer("ID de la solicitud: ")
+            solicitud = self.buscar(id_solicitud)
+            if solicitud == None:
+                print("Error: no existe una solicitud con ID " + id_solicitud + ".")
                 return True
             print("Responsables disponibles:")
-            for i in range(len(self.resp)):
-                print("  " + str(self.resp[i].id) + " - " + self.resp[i].nombre + " (" + self.resp[i].area + ")")
-            idr = self.leer("ID del responsable: ")
+            for i in range(len(self.responsables)):
+                print("  " + str(self.responsables[i].id) + " - " + self.responsables[i].nombre + " (" + self.responsables[i].area + ")")
+            id_responsable = self.leer("ID del responsable: ")
             try:
-                self.asignar_responsable(id2, idr)
+                self.asignar_responsable(id_solicitud, id_responsable)
             except OperacionRechazadaException as e:
                 print("Error: " + str(e))
                 return True
-            rr = s2.get_responsable()
-            print("Responsable asignado: " + rr.nombre + " (" + rr.area + ") -> solicitud #" + str(s2.id))
+            responsable = solicitud.get_responsable()
+            print("Responsable asignado: " + responsable.nombre + " (" + responsable.area + ") -> solicitud #" + str(solicitud.id))
         elif op == "4":
             print("--- Buscar / filtrar solicitudes ---")
             print("Filtrar por:")
@@ -119,41 +119,41 @@ class GestorSolicitudes:
             print("  2. Tipo")
             print("  3. Prioridad")
             print("  4. Legajo")
-            f = self.leer("Opcion: ")
-            aux = None
-            if f == "1":
-                v = self.leer("Estado (PENDIENTE, EN_REVISION, APROBADA, RECHAZADA, CERRADA): ")
-                aux = self.filtrar_por_estado(v)
-            elif f == "2":
-                v = self.leer("Tipo (CERTIFICADO, CAMBIO_COMISION, REVISION_NOTA, EQUIVALENCIA, OTRO): ")
-                aux = self.filtrar_por_tipo(v)
-            elif f == "3":
-                v = self.leer("Prioridad (ALTA, MEDIA, BAJA): ")
-                aux = self.filtrar_por_prioridad(v)
-            elif f == "4":
-                v = self.leer("Legajo: ")
-                aux = self.filtrar_por_legajo(v)
+            opcion_filtro = self.leer("Opcion: ")
+            resultado_filtro = None
+            if opcion_filtro == "1":
+                valor_filtro = self.leer("Estado (PENDIENTE, EN_REVISION, APROBADA, RECHAZADA, CERRADA): ")
+                resultado_filtro = self.filtrar_por_estado(valor_filtro)
+            elif opcion_filtro == "2":
+                valor_filtro = self.leer("Tipo (CERTIFICADO, CAMBIO_COMISION, REVISION_NOTA, EQUIVALENCIA, OTRO): ")
+                resultado_filtro = self.filtrar_por_tipo(valor_filtro)
+            elif opcion_filtro == "3":
+                valor_filtro = self.leer("Prioridad (ALTA, MEDIA, BAJA): ")
+                resultado_filtro = self.filtrar_por_prioridad(valor_filtro)
+            elif opcion_filtro == "4":
+                valor_filtro = self.leer("Legajo: ")
+                resultado_filtro = self.filtrar_por_legajo(valor_filtro)
             else:
                 print("Opcion invalida.")
                 return True
-            if len(aux) == 0:
+            if len(resultado_filtro) == 0:
                 print("No se encontraron solicitudes.")
             else:
-                print("Se encontraron " + str(len(aux)) + " solicitud(es):")
+                print("Se encontraron " + str(len(resultado_filtro)) + " solicitud(es):")
                 print("")
-                for i in range(len(aux)):
-                    self.mostrar(aux[i])
+                for i in range(len(resultado_filtro)):
+                    self.mostrar(resultado_filtro[i])
         elif op == "5":
             self.reporte()
         elif op == "6":
             print("--- Listado de solicitudes ---")
-            if len(self.lst) == 0:
+            if len(self.solicitudes) == 0:
                 print("No hay solicitudes registradas.")
                 return True
             print("")
-            for i in range(len(self.lst)):
-                self.mostrar(self.lst[i])
-            print("Total: " + str(len(self.lst)) + " solicitud(es).")
+            for i in range(len(self.solicitudes)):
+                self.mostrar(self.solicitudes[i])
+            print("Total: " + str(len(self.solicitudes)) + " solicitud(es).")
         elif op == "0":
             print("Saliendo del sistema...")
             return False
@@ -196,12 +196,12 @@ class GestorSolicitudes:
         apellido = ""
         email = ""
         carrera = ""
-        for i in range(len(self.ests)):
-            if self.ests[i].legajo == legajo:
-                nombre = self.ests[i].nombre
-                apellido = self.ests[i].apellido
-                email = self.ests[i].email
-                carrera = self.ests[i].carrera
+        for i in range(len(self.estudiantes)):
+            if self.estudiantes[i].legajo == legajo:
+                nombre = self.estudiantes[i].nombre
+                apellido = self.estudiantes[i].apellido
+                email = self.estudiantes[i].email
+                carrera = self.estudiantes[i].carrera
                 print("Estudiante encontrado: " + apellido + ", " + nombre + " (" + carrera + ")")
                 return nombre, apellido, email, carrera
         print("El estudiante no esta registrado. Ingrese sus datos.")
@@ -256,22 +256,21 @@ class GestorSolicitudes:
         print("  Fecha: " + fecha)
 
     def registrar_solicitud(self, legajo, nombre, apellido, email, carrera, tipo, descripcion, prioridad, fecha):
-        est = None
-        for i in range(len(self.ests)):
-            if self.ests[i].legajo == legajo:
-                est = self.ests[i]
-        if est == None:
-            est = Estudiante(legajo, nombre, apellido, email, carrera)
-            self.ests.append(est)
-        # calcula el proximo id
-        aux = 0
-        for i in range(len(self.lst)):
-            if self.lst[i].id > aux:
-                aux = self.lst[i].id
-        s = Solicitud(aux + 1, est, tipo, descripcion, prioridad, "PENDIENTE", None, fecha, fecha)
-        self.lst.append(s)
+        estudiante = None
+        for i in range(len(self.estudiantes)):
+            if self.estudiantes[i].legajo == legajo:
+                estudiante = self.estudiantes[i]
+        if estudiante == None:
+            estudiante = Estudiante(legajo, nombre, apellido, email, carrera)
+            self.estudiantes.append(estudiante)
+        proximo_id = 0
+        for i in range(len(self.solicitudes)):
+            if self.solicitudes[i].id > proximo_id:
+                proximo_id = self.solicitudes[i].id
+        solicitud = Solicitud(proximo_id + 1, estudiante, tipo, descripcion, prioridad, "PENDIENTE", None, fecha, fecha)
+        self.solicitudes.append(solicitud)
         self.guardar()
-        return s.id
+        return solicitud.id
 
     # devuelve False si la solicitud ya estaba en ese estado (no es un error)
     def cambiar_estado(self, id, nuevo):
@@ -290,17 +289,17 @@ class GestorSolicitudes:
         return True
 
     def asignar_responsable(self, id_solicitud, id_responsable):
-        s = self.buscar_existente(id_solicitud)
-        x = None
-        for i in range(len(self.resp)):
-            if str(self.resp[i].id) == id_responsable:
-                x = self.resp[i]
-        if x == None:
+        solicitud = self.buscar_existente(id_solicitud)
+        responsable_encontrado = None
+        for i in range(len(self.responsables)):
+            if str(self.responsables[i].id) == id_responsable:
+                responsable_encontrado = self.responsables[i]
+        if responsable_encontrado == None:
             raise ResponsableNoEncontradoException(id_responsable)
-        if s.estado == "CERRADA":
+        if solicitud.estado == "CERRADA":
             raise SolicitudCerradaException()
-        s.set_responsable(x)
-        s.set_fecha_modificacion(self.hoy())
+        solicitud.set_responsable(responsable_encontrado)
+        solicitud.set_fecha_modificacion(self.hoy())
         self.guardar()
 
     def buscar_existente(self, id):
@@ -314,14 +313,14 @@ class GestorSolicitudes:
             n = int(id)
         except ValueError:
             return None
-        for i in range(len(self.lst)):
-            if self.lst[i].id == n:
-                return self.lst[i]
+        for i in range(len(self.solicitudes)):
+            if self.solicitudes[i].id == n:
+                return self.solicitudes[i]
         return None
 
     def _filtrar(self, obtener_valor, valor):
         """Recorrido único; cada función pública conserva la semántica original."""
-        return [solicitud for solicitud in self.lst
+        return [solicitud for solicitud in self.solicitudes
                 if obtener_valor(solicitud) == valor]
 
     def filtrar_por_estado(self, x):
@@ -353,8 +352,7 @@ class GestorSolicitudes:
         print("")
 
     def reporte(self):
-        # Se mantiene la misma salida de consola, pero el cálculo es independiente.
-        print(ReporteService.generar(self.lst, self.hoy()))
+        print(ReporteService.generar(self.solicitudes, self.hoy()))
 
     def dias_desde_creacion(self, s):
         # Puente para mantener las llamadas de la consola durante la refactorización.
@@ -370,9 +368,9 @@ class GestorSolicitudes:
 
     def cargar(self):
         datos = self.repositorio.cargar()
-        self.ests = datos.estudiantes
-        self.resp = datos.responsables
-        self.lst = datos.solicitudes
+        self.estudiantes = datos.estudiantes
+        self.responsables = datos.responsables
+        self.solicitudes = datos.solicitudes
 
     def guardar(self):
-        self.repositorio.guardar(DatosSistema(self.ests, self.resp, self.lst))
+        self.repositorio.guardar(DatosSistema(self.estudiantes, self.responsables, self.solicitudes))

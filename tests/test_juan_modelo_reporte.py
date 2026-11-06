@@ -40,11 +40,11 @@ def test_estados_resueltos_nunca_vencen(estado):
 
 def test_filtrado_conserva_semantica_de_texto():
     gestor = GestorSolicitudes(SolicitudRepositorioArchivo())
-    gestor.lst = [solicitud(legajo="Abc"), solicitud(legajo="abc")]
-    assert gestor.filtrar_por_tipo(" certificado ") == gestor.lst
-    assert gestor.filtrar_por_estado(" pendiente ") == gestor.lst
-    assert gestor.filtrar_por_prioridad(" alta ") == gestor.lst
-    assert gestor.filtrar_por_legajo(" Abc ") == gestor.lst[:1]
+    gestor.solicitudes = [solicitud(legajo="Abc"), solicitud(legajo="abc")]
+    assert gestor.filtrar_por_tipo(" certificado ") == gestor.solicitudes
+    assert gestor.filtrar_por_estado(" pendiente ") == gestor.solicitudes
+    assert gestor.filtrar_por_prioridad(" alta ") == gestor.solicitudes
+    assert gestor.filtrar_por_legajo(" Abc ") == gestor.solicitudes[:1]
     assert gestor.filtrar_por_legajo(" ABC ") == []
 
 
