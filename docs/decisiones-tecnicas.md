@@ -94,5 +94,10 @@
 - **Qué viola:** las reglas de Clean Code de no dejar código muerto y de que los comentarios expliquen el "por qué" y sean verdaderos.
 - **Qué se propone:** aplicar Remove Dead Code: borrar `exportar_csv()` (si en el futuro hace falta exportar, se recupera del historial de Git), los getters y setters sin uso y las ramas `elif ... pass`. Con `validar_email()` se decide junto con Gaston (área de registro): si `registrar()` pasa a usarla, cambia el comportamiento y se documenta como mejora intencional; si no, se borra. Comentarios: eliminar los que repiten el código y corregir o eliminar los falsos (estados "P/A/R", "devuelve True", "base de datos").
 - **Por qué:** hay menos código para leer y mantener, y los comentarios dejan de dar información equivocada.
-
-
+- **Qué se decidió (Fase 3):**
+  - Se borraron `exportar_csv()`, `validar_email()` y los 7 getters y setters sin uso.
+  - Con `validar_email()` (área de registro, de Gaston) se eligió borrarlo y no conectarlo a `registrar()`: conectarlo cambiaba qué emails se aceptan (por ejemplo, `a@b` dejaría de ser válido), y eso es una regla de negocio, no un refactoring. Si el grupo quiere esa validación más estricta, se agrega como mejora con su test.
+  - Se mantuvieron los accesores que sí se usan (`get_estado`, `set_estado`, `get_responsable`, `set_responsable`, `get_fecha_creacion`, `set_fecha_modificacion`).
+  - `proc()` conserva su nombre: lo renombra Gaston (S03).
+  - Los comentarios de `iniciar()`, `leer()` y `registrar()` quedan para el Extract Class de consola de Gaston. El de `reporte()` desaparece con el `ReporteService` de Juan.
+- **Alternativas consideradas:** comentar el código en lugar de borrarlo. Se descartó porque es otra forma de código muerto: el historial de Git ya guarda la versión anterior.
