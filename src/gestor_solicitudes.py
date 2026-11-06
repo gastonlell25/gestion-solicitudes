@@ -442,29 +442,6 @@ class GestorSolicitudes:
             return os.environ.get("FECHA_HOY")
         return datetime.date.today().strftime("%Y-%m-%d")
 
-    def validar_email(self, email):
-        if email == None or email == "":
-            return False
-        partes = email.split("@")
-        if len(partes) != 2:
-            return False
-        if partes[1].find(".") == -1:
-            return False
-        return True
-
-    # exporta las solicitudes a un csv para mandarle a alumnado
-    def exportar_csv(self, ruta):
-        txt = "id;legajo;tipo;prioridad;estado;fecha\n"
-        for i in range(len(self.lst)):
-            x = self.lst[i]
-            txt += str(x.id) + ";" + x.estudiante.legajo + ";" + x.tipo + ";" + x.prioridad + ";" + x.estado + ";" + x.fecha_creacion + "\n"
-        try:
-            f = open(ruta, "w")
-            f.write(txt)
-            f.close()
-        except:
-            pass
-
     def cargar(self):
         datos = self.repositorio.cargar()
         self.ests = datos.estudiantes
