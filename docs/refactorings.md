@@ -563,6 +563,63 @@ asignación y T05–T09 los de cambio de estado). La salida de consola es idént
 
 ---
 
+## 9 - Remove Dead Code y comentarios desactualizados (Fabri)
+
+**Smell que resuelve:** S12 — Código muerto y comentarios desactualizados.
+
+**Principio relacionado:** Clean Code: sin código muerto (YAGNI); comentarios que explican el "por qué" y no mienten.
+
+**Archivos y métodos afectados:** `src/gestor_solicitudes.py` → `validar_email()` y `exportar_csv()` (eliminados);
+`src/modelos/solicitud.py` → 7 getters y setters sin uso (eliminados) y comentarios; `src/archivo_json.py` y
+`src/persistencia/solicitud_repositorio_archivo.py` → comentarios.
+
+**Código antes:**
+```python
+# solicitud.py
+# Clase Solicitud
+# el estado puede ser "P" (pendiente), "A" (aprobada) o "R" (rechazada)   <- falso: son 5 estados en mayúsculas
+class Solicitud:
+    def get_id(self): ...            # nadie lo llama (igual que get_estudiante, get_tipo,
+    def get_descripcion(self): ...   # get_prioridad, set_prioridad y get_fecha_modificacion)
+    # devuelve el estado            <- repite el código
+    def get_estado(self): ...
+
+# gestor_solicitudes.py
+def validar_email(self, email): ...      # nunca se llama; registrar() valida con find("@")
+def exportar_csv(self, ruta):            # nunca se llama
+    ...
+    except:
+        pass
+
+# archivo_json.py
+# Clase para manejar la base de datos     <- es un archivo JSON, no una base de datos
+```
+
+**Código después:**
+```python
+# solicitud.py
+class Solicitud:
+    """Solicitud academica. El estado es uno de los valores de Estado (modelos/estado.py)."""
+    ...                                   # quedan solo los accesores que se usan
+
+# archivo_json.py
+class ArchivoJSON:
+    """Lee y escribe el archivo de datos (data/solicitudes.json, o la ruta de ARCHIVO_DATOS)."""
+```
+
+**Justificación:** hay menos código para leer y mantener (−48 líneas) y desaparece el último `except:` vacío del
+proyecto, que estaba en `exportar_csv()`. Además, ya no hay dos validaciones de email distintas que puedan dar resultados
+diferentes, y los comentarios dicen la verdad. Si en el futuro hace falta exportar a CSV, el código se recupera del historial de Git.
+
+**Commits:** `f0fc485` (`validar_email()` y `exportar_csv()`), `bd10463` (getters y setters), `630830f` (comentarios).
+
+**Resultado de los tests:** 82/82 en verde después de cada commit. La salida de consola es idéntica a la del paso anterior en las 14 sesiones.
+
+**Evidencia:** `docs/evidencias/despues/despues_fabri_diff_remove-dead-code.png`,
+`docs/evidencias/despues/despues_fabri_tests_codigo-muerto.png`.
+
+---
+
 ## Notas para futuras fases
 
 - El objeto `DatosSolicitud` podría tener métodos de validación en el futuro
