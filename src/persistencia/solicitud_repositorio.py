@@ -3,6 +3,10 @@ from abc import ABC, abstractmethod
 from persistencia.datos_sistema import DatosSistema
 
 
+class PersistenciaException(Exception):
+    """No se pudieron leer o guardar los datos. El mensaje explica la causa al usuario."""
+
+
 class SolicitudRepositorio(ABC):
     """Lo único que el gestor necesita de la persistencia: recuperar y guardar los datos.
 
@@ -13,8 +17,8 @@ class SolicitudRepositorio(ABC):
 
     @abstractmethod
     def cargar(self) -> DatosSistema:
-        """Devuelve los datos guardados."""
+        """Devuelve los datos guardados. Lanza PersistenciaException si no se pueden leer."""
 
     @abstractmethod
-    def guardar(self, datos: DatosSistema) -> bool:
-        """Guarda los datos. Devuelve False si no se pudieron guardar."""
+    def guardar(self, datos: DatosSistema) -> None:
+        """Guarda los datos. Lanza PersistenciaException si no se pudieron guardar."""

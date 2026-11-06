@@ -5,8 +5,14 @@ from modelos.solicitud import Solicitud
 from modelos.estado import Estado, EstadoInvalidoException, TransicionInvalidaException
 from modelos.tipo_solicitud import TipoSolicitud
 from modelos.prioridad import Prioridad
+from modelos.excepciones import (
+    OperacionRechazadaException,
+    ResponsableNoEncontradoException,
+    SolicitudCerradaException,
+    SolicitudNoEncontradaException,
+)
 from persistencia.datos_sistema import DatosSistema
-from persistencia.solicitud_repositorio import SolicitudRepositorio
+from persistencia.solicitud_repositorio import PersistenciaException, SolicitudRepositorio
 
 
 # Clase principal del sistema
@@ -20,7 +26,12 @@ class GestorSolicitudes:
         self.fin = False
 
     def iniciar(self):
-        self.cargar()
+        try:
+            self.cargar()
+        except PersistenciaException as e:
+            print("Error: " + str(e) + ".")
+            print("El sistema no puede iniciar sin sus datos. El archivo no se modifico.")
+            return
         flag = True
         while flag:
             self.mostrar_menu()
@@ -28,7 +39,12 @@ class GestorSolicitudes:
             if self.fin:
                 print("")
                 op = "0"
-            flag = self.procesar_opcion(op)
+            try:
+                flag = self.procesar_opcion(op)
+            except PersistenciaException as e:
+                print("Error: " + str(e) + ". La operacion no se guardo.")
+                # vuelve al ultimo estado guardado para no persistir despues un cambio que el usuario vio fallar
+                self.cargar()
             print("")
 
     def mostrar_menu(self):
@@ -66,19 +82,17 @@ class GestorSolicitudes:
             nuevo = nuevo.upper().replace(" ", "_")
             anterior = s.get_estado()
             try:
-                r = self.cambiar_estado(id, nuevo)
+                cambio = self.cambiar_estado(id, nuevo)
             except EstadoInvalidoException:
                 print("Error: estado invalido.")
                 return True
-            except TransicionInvalidaException as e:
+            except (OperacionRechazadaException, TransicionInvalidaException) as e:
                 print("Error: " + str(e))
                 return True
-            if r == 1:
+            if cambio:
                 print("Estado actualizado: " + anterior + " -> " + nuevo)
-            elif r == 0:
-                print("La solicitud ya se encuentra en estado " + nuevo + ".")
             else:
-                print("Error: no existe una solicitud con ID " + id + ".")
+                print("La solicitud ya se encuentra en estado " + nuevo + ".")
         elif op == "3":
             print("--- Asignar responsable ---")
             id2 = self.leer("ID de la solicitud: ")
@@ -90,16 +104,13 @@ class GestorSolicitudes:
             for i in range(len(self.resp)):
                 print("  " + str(self.resp[i].id) + " - " + self.resp[i].nombre + " (" + self.resp[i].area + ")")
             idr = self.leer("ID del responsable: ")
-            res = self.asignar_responsable(id2, idr)
-            if res == 1:
-                rr = s2.get_responsable()
-                print("Responsable asignado: " + rr.nombre + " (" + rr.area + ") -> solicitud #" + str(s2.id))
-            elif res == -2:
-                print("Error: no existe un responsable con ID " + idr + ".")
-            elif res == -3:
-                print("Error: no se puede asignar responsable a una solicitud CERRADA.")
-            else:
-                print("Error: no se pudo asignar el responsable.")
+            try:
+                self.asignar_responsable(id2, idr)
+            except OperacionRechazadaException as e:
+                print("Error: " + str(e))
+                return True
+            rr = s2.get_responsable()
+            print("Responsable asignado: " + rr.nombre + " (" + rr.area + ") -> solicitud #" + str(s2.id))
         elif op == "4":
             print("--- Buscar / filtrar solicitudes ---")
             print("Filtrar por:")
@@ -167,9 +178,6 @@ class GestorSolicitudes:
         prioridad = self.leer_y_validar_prioridad(tipo)
         fecha = self.hoy()
         id = self.registrar_solicitud(legajo, nombre, apellido, email, carrera, tipo.value, descripcion, prioridad.value, fecha)
-        if id == -1:
-            print("Error: no se pudo guardar la solicitud.")
-            return
         self.mostrar_resultado_registro(id, legajo, apellido, nombre, tipo, prioridad, fecha)
 
     def leer_y_validar_legajo(self):
@@ -261,19 +269,16 @@ class GestorSolicitudes:
                 aux = self.lst[i].id
         s = Solicitud(aux + 1, est, tipo, descripcion, prioridad, "PENDIENTE", None, fecha, fecha)
         self.lst.append(s)
-        if not self.guardar():
-            return -1
+        self.guardar()
         return s.id
 
-    # devuelve True si se pudo cambiar el estado
+    # devuelve False si la solicitud ya estaba en ese estado (no es un error)
     def cambiar_estado(self, id, nuevo):
-        s = self.buscar(id)
-        if s == None:
-            return -1
+        s = self.buscar_existente(id)
         nuevo_estado = Estado.from_str(nuevo)
         actual_estado = Estado.from_str(s.get_estado())
         if actual_estado == nuevo_estado:
-            return 0
+            return False
         if not actual_estado.puede_pasar_a(nuevo_estado):
             raise TransicionInvalidaException(
                 "no se puede pasar de " + actual_estado.value + " a " + nuevo_estado.value + "."
@@ -281,29 +286,32 @@ class GestorSolicitudes:
         s.set_estado(nuevo_estado.value)
         s.set_fecha_modificacion(self.hoy())
         self.guardar()
-        return 1
+        return True
 
     def asignar_responsable(self, id_solicitud, id_responsable):
-        s = self.buscar(id_solicitud)
-        if s == None:
-            return -1
+        s = self.buscar_existente(id_solicitud)
         x = None
         for i in range(len(self.resp)):
             if str(self.resp[i].id) == id_responsable:
                 x = self.resp[i]
         if x == None:
-            return -2
+            raise ResponsableNoEncontradoException(id_responsable)
         if s.estado == "CERRADA":
-            return -3
+            raise SolicitudCerradaException()
         s.set_responsable(x)
         s.set_fecha_modificacion(self.hoy())
         self.guardar()
-        return 1
+
+    def buscar_existente(self, id):
+        s = self.buscar(id)
+        if s is None:
+            raise SolicitudNoEncontradaException(id)
+        return s
 
     def buscar(self, id):
         try:
             n = int(id)
-        except:
+        except ValueError:
             return None
         for i in range(len(self.lst)):
             if self.lst[i].id == n:
@@ -464,4 +472,4 @@ class GestorSolicitudes:
         self.lst = datos.solicitudes
 
     def guardar(self):
-        return self.repositorio.guardar(DatosSistema(self.ests, self.resp, self.lst))
+        self.repositorio.guardar(DatosSistema(self.ests, self.resp, self.lst))
