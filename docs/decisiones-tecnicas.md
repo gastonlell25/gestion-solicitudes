@@ -79,6 +79,17 @@
 - **Alternativas consideradas:** mantener los códigos pero con constantes con nombre (`RESPONSABLE_INEXISTENTE = -2`). Se descarta porque el error se sigue pudiendo ignorar sin que nadie se entere.
 - **Por qué:** un error no puede pasar desapercibido, el mensaje al usuario es claro y siempre igual, y agregar un error nuevo no obliga a tocar cada `if` del menú.
 
+- **Qué se decidió (Fase 3):**
+  - **Errores de persistencia:** `PersistenciaException` se define junto a la interfaz `SolicitudRepositorio`, porque es parte de su contrato. `ArchivoJSON` solo maneja el caso esperado (`FileNotFoundError` → el archivo todavía no existe) y deja pasar el resto. El repositorio traduce `OSError`, `json.JSONDecodeError`, `KeyError` y `TypeError` a `PersistenciaException`, con un mensaje para el usuario.
+  - **Dónde se muestran:** la consola los captura en un solo lugar. En `iniciar()`, al cargar, el sistema no arranca y avisa que el archivo no se modificó. En el bucle del menú, al guardar, muestra el error y recarga el último estado guardado, para no persistir después un cambio que el usuario vio fallar.
+  - **Errores de reglas:** `src/modelos/excepciones.py` define `OperacionRechazadaException` como base de `SolicitudNoEncontradaException`, `ResponsableNoEncontradoException` y `SolicitudCerradaException`. Cada una lleva su mensaje y el menú hace `print("Error: " + str(e))`, igual que con `TransicionInvalidaException` de Gabriel. Se coordinó no mover las excepciones de Gabriel, que siguen en `modelos/estado.py`.
+- **Comportamiento que cambia (mejora intencional):** archivo dañado y guardado fallido; están detallados en `docs/pruebas.md` → "Bugs del sistema base encontrados". El resto de los mensajes al usuario quedó igual, letra por letra.
+- **Alternativas consideradas:**
+  - Que `ArchivoJSON` lance directamente `PersistenciaException`: se descartó porque `ArchivoJSON` no conoce el formato. Solo el repositorio puede distinguir "archivo dañado" de "no se pudo leer".
+  - Deshacer el cambio con la técnica de "copiar y restaurar" cada objeto antes de modificarlo: más código en cada operación. Recargar desde el repositorio deja el sistema en el último estado guardado con una sola línea.
+  - Una única excepción genérica con un código adentro: volvía a obligar al menú a interpretar códigos.
+- **Mejora pendiente:** si falla el guardado al registrar un estudiante nuevo, también se descarta el estudiante (es parte del mismo cambio); es el comportamiento buscado, pero el mensaje no lo aclara.
+
 ### S12 - Código muerto y comentarios desactualizados
 - **Qué viola:** las reglas de Clean Code de no dejar código muerto y de que los comentarios expliquen el "por qué" y sean verdaderos.
 - **Qué se propone:** aplicar Remove Dead Code: borrar `exportar_csv()` (si en el futuro hace falta exportar, se recupera del historial de Git), los getters y setters sin uso y las ramas `elif ... pass`. Con `validar_email()` se decide junto con Gaston (área de registro): si `registrar()` pasa a usarla, cambia el comportamiento y se documenta como mejora intencional; si no, se borra. Comentarios: eliminar los que repiten el código y corregir o eliminar los falsos (estados "P/A/R", "devuelve True", "base de datos").
