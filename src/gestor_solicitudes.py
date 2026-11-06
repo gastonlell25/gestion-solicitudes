@@ -412,23 +412,11 @@ class GestorSolicitudes:
         print("=================================")
 
     def dias_desde_creacion(self, s):
-        p = s.get_fecha_creacion().split("-")
-        h = self.hoy().split("-")
-        f1 = datetime.date(int(p[0]), int(p[1]), int(p[2]))
-        f2 = datetime.date(int(h[0]), int(h[1]), int(h[2]))
-        return (f2 - f1).days
+        # Puente para mantener las llamadas de la consola durante la refactorización.
+        return s.dias_desde_creacion(self.hoy())
 
     def esta_vencida(self, s):
-        if s.estado != "PENDIENTE" and s.estado != "EN_REVISION":
-            return False
-        d = self.dias_desde_creacion(s)
-        if s.prioridad == "ALTA" and d > 3:
-            return True
-        if s.prioridad == "MEDIA" and d > 7:
-            return True
-        if s.prioridad == "BAJA" and d > 15:
-            return True
-        return False
+        return s.esta_vencida(self.hoy())
 
     def hoy(self):
         if os.environ.get("FECHA_HOY"):
