@@ -272,6 +272,131 @@ id = self.registrar_solicitud(datos)
 
 ---
 
+## 5 - Extract Class: SolicitudRepositorioArchivo (Fabri)
+
+**Smell que resuelve:** S10 — God Class + acoplamiento directo a la persistencia.
+
+**Principio relacionado:** SRP; Clean Code: límites entre componentes (ver `docs/decisiones-tecnicas.md`).
+
+**Archivos y métodos afectados:** `src/persistencia/solicitud_repositorio_archivo.py` (nuevo),
+`src/persistencia/datos_sistema.py` (nuevo), `src/gestor_solicitudes.py` → `__init__()`, `cargar()`, `guardar()`;
+se movieron `proc()` y `datos_ejemplo()`.
+
+**Código antes** (`src/gestor_solicitudes.py`):
+```python
+def __init__(self):
+    ...
+    self.archivo = ArchivoJSON()
+
+def cargar(self):
+    data2 = None
+    txt = self.archivo.leer()
+    if txt != None:
+        try:
+            data2 = json.loads(txt)
+        except:
+            pass
+    if data2 == None:
+        data2 = self.datos_ejemplo()
+        self.proc(data2)
+        self.guardar()
+    else:
+        self.proc(data2)
+
+def proc(self, data2):        # convierte el JSON en objetos (25 líneas)
+    ...
+def guardar(self):            # convierte los objetos en JSON y escribe el archivo
+    ...
+def datos_ejemplo(self):      # 26 líneas de datos de ejemplo
+    ...
+```
+
+**Código después** (`src/gestor_solicitudes.py`):
+```python
+def cargar(self):
+    datos = self.repositorio.cargar()
+    self.ests = datos.estudiantes
+    self.resp = datos.responsables
+    self.lst = datos.solicitudes
+
+def guardar(self):
+    return self.repositorio.guardar(DatosSistema(self.ests, self.resp, self.lst))
+```
+`cargar()`, `proc()`, `guardar()` y `datos_ejemplo()` se movieron **sin cambios de lógica** a
+`SolicitudRepositorioArchivo`, que devuelve y recibe un `DatosSistema` (dataclass con las tres listas).
+`proc()` conserva su nombre porque lo renombra Gaston (S03).
+
+**Justificación:** el gestor deja de saber cómo se guarda la información (formato JSON, conversión
+de diccionarios a objetos, datos de ejemplo). Pasa de 538 a 467 líneas y pierde una razón para cambiar (SRP).
+Los `except:` vacíos se movieron tal cual; se corrigen en el refactoring de S11, para que cada commit
+haga una sola cosa.
+
+**Commit:** `d6e4d10`.
+
+**Resultado de los tests:** 75/75 en verde. Además, la salida de 14 sesiones de consola (todas las
+opciones del menú, archivo inexistente, archivo dañado y archivo de solo lectura) es idéntica byte a byte a la de `main`.
+
+**Evidencia:** `docs/evidencias/despues/despues_fabri_diff_extract-class-repositorio.png`.
+
+---
+
+## 6 - Introduce Interface + inyección por constructor: SolicitudRepositorio (Fabri)
+
+**Smell que resuelve:** S10 — God Class + acoplamiento directo a la persistencia.
+
+**Principio relacionado:** DIP e ISP (ver `docs/decisiones-tecnicas.md`).
+
+**Archivos y métodos afectados:** `src/persistencia/solicitud_repositorio.py` (nuevo),
+`src/persistencia/solicitud_repositorio_archivo.py`, `src/gestor_solicitudes.py` → `__init__()`, `src/main.py`.
+
+**Código antes:**
+```python
+# gestor_solicitudes.py
+from persistencia.solicitud_repositorio_archivo import SolicitudRepositorioArchivo
+
+def __init__(self):
+    ...
+    self.repositorio = SolicitudRepositorioArchivo()   # el gestor elige la clase concreta
+
+# main.py
+g = GestorSolicitudes()
+```
+
+**Código después:**
+```python
+# persistencia/solicitud_repositorio.py
+class SolicitudRepositorio(ABC):
+    @abstractmethod
+    def cargar(self) -> DatosSistema: ...
+    @abstractmethod
+    def guardar(self, datos: DatosSistema) -> bool: ...
+
+# gestor_solicitudes.py
+from persistencia.solicitud_repositorio import SolicitudRepositorio
+
+def __init__(self, repositorio: SolicitudRepositorio):
+    ...
+    self.repositorio = repositorio
+
+# main.py: arma las dependencias
+g = GestorSolicitudes(SolicitudRepositorioArchivo())
+```
+
+**Justificación:** el gestor (alto nivel) depende de una abstracción y no del archivo (bajo nivel).
+Para cambiar JSON por otra forma de guardar se escribe otra implementación de `SolicitudRepositorio`
+y se cambia una línea de `main.py`, sin tocar el gestor (DIP). La interfaz tiene solo las dos
+operaciones que el gestor usa (ISP). `tests/test_fabri_repositorio.py` lo demuestra: prueba el gestor
+con un `RepositorioEnMemoria` que no toca ningún archivo.
+
+**Commits:** `7dd5d26` (interfaz e inyección), `af4a4ff` (tests unitarios del repositorio).
+
+**Resultado de los tests:** 79/79 en verde (75 + 4 nuevos). Salida de consola idéntica a `main` en las 14 sesiones.
+
+**Evidencia:** `docs/evidencias/despues/despues_fabri_diff_introduce-interface.png`,
+`docs/evidencias/despues/despues_fabri_tests_repositorio.png`.
+
+---
+
 ## Notas para futuras fases
 
 - El objeto `DatosSolicitud` podría tener métodos de validación en el futuro
