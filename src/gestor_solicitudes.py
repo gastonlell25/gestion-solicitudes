@@ -4,7 +4,7 @@ import datetime
 from modelos.estudiante import Estudiante
 from modelos.responsable import Responsable
 from modelos.solicitud import Solicitud
-from modelos.estado import Estado, TransicionInvalidaException
+from modelos.estado import Estado, EstadoInvalidoException, TransicionInvalidaException
 from modelos.tipo_solicitud import TipoSolicitud
 from modelos.prioridad import Prioridad
 from archivo_json import ArchivoJSON
@@ -68,6 +68,9 @@ class GestorSolicitudes:
             anterior = s.get_estado()
             try:
                 r = self.cambiar_estado(id, nuevo)
+            except EstadoInvalidoException:
+                print("Error: estado invalido.")
+                return True
             except TransicionInvalidaException as e:
                 print("Error: " + str(e))
                 return True
@@ -268,10 +271,7 @@ class GestorSolicitudes:
         s = self.buscar(id)
         if s == None:
             return -1
-        try:
-            nuevo_estado = Estado.from_str(nuevo)
-        except ValueError:
-            raise TransicionInvalidaException("estado invalido.") from None
+        nuevo_estado = Estado.from_str(nuevo)
         actual_estado = Estado.from_str(s.get_estado())
         if actual_estado == nuevo_estado:
             return 0

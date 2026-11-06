@@ -106,3 +106,38 @@ def test_aprobada_a_cerrada_es_valido(tmp_path):
     # Assert
     assert "Estado actualizado: APROBADA -> CERRADA" in salida
     assert leer_solicitud(archivo, 4)["estado"] == "CERRADA"
+
+
+# Casos adicionales pedidos en la revision de PR (Gaston): confirmar de punta a punta
+# que "mismo estado", una regresion no listada explicitamente y un estado invalido
+# tambien se comportan como espera la tabla de transiciones.
+
+
+def test_mismo_estado_no_se_considera_error(tmp_path):
+    """La solicitud #1 ya esta en PENDIENTE: pasar al mismo estado no es un error."""
+    archivo = copiar_datos(tmp_path)
+
+    salida = ejecutar_sistema(["2", "1", "PENDIENTE", "0"], archivo)
+
+    assert "La solicitud ya se encuentra en estado PENDIENTE." in salida
+    assert leer_solicitud(archivo, 1)["estado"] == "PENDIENTE"
+
+
+def test_aprobada_a_en_revision_es_rechazado(tmp_path):
+    """Una solicitud APROBADA no puede retroceder a EN_REVISION."""
+    archivo = copiar_datos(tmp_path)
+
+    salida = ejecutar_sistema(["2", "4", "EN_REVISION", "0"], archivo)
+
+    assert "Error: no se puede pasar de APROBADA a EN_REVISION." in salida
+    assert leer_solicitud(archivo, 4)["estado"] == "APROBADA"
+
+
+def test_estado_invalido_muestra_error(tmp_path):
+    """Un valor que no es ninguno de los 5 estados muestra el error correspondiente."""
+    archivo = copiar_datos(tmp_path)
+
+    salida = ejecutar_sistema(["2", "1", "INEXISTENTE", "0"], archivo)
+
+    assert "Error: estado invalido." in salida
+    assert leer_solicitud(archivo, 1)["estado"] == "PENDIENTE"

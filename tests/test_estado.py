@@ -7,7 +7,7 @@ transiciones antes de conectarla con gestor_solicitudes.py.
 
 import pytest
 
-from modelos.estado import Estado, TransicionInvalidaException
+from modelos.estado import Estado, EstadoInvalidoException, TransicionInvalidaException
 
 
 @pytest.mark.parametrize(
@@ -25,9 +25,14 @@ def test_from_str_normaliza_y_reconoce_estados_validos(texto, esperado):
     assert Estado.from_str(texto) == esperado
 
 
-def test_from_str_con_valor_invalido_lanza_value_error():
-    with pytest.raises(ValueError):
+def test_from_str_con_valor_invalido_lanza_estado_invalido_exception():
+    with pytest.raises(EstadoInvalidoException):
         Estado.from_str("INEXISTENTE")
+
+
+def test_estado_invalido_exception_es_tambien_value_error():
+    # Para que el codigo que ya capturaba ValueError no se rompa.
+    assert issubclass(EstadoInvalidoException, ValueError)
 
 
 @pytest.mark.parametrize(
@@ -58,3 +63,17 @@ def test_puede_pasar_a_respeta_la_tabla_de_transiciones(actual, nuevo, permitido
 
 def test_transicion_invalida_exception_es_una_excepcion_comun():
     assert issubclass(TransicionInvalidaException, Exception)
+
+
+@pytest.mark.parametrize(
+    "estado, es_final",
+    [
+        (Estado.PENDIENTE, False),
+        (Estado.EN_REVISION, False),
+        (Estado.APROBADA, False),
+        (Estado.RECHAZADA, False),
+        (Estado.CERRADA, True),
+    ],
+)
+def test_es_final_solo_cerrada_no_tiene_transiciones_salientes(estado, es_final):
+    assert estado.es_final() is es_final
