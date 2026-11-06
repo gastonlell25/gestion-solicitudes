@@ -88,7 +88,7 @@
   - Que `ArchivoJSON` lance directamente `PersistenciaException`: se descartó porque `ArchivoJSON` no conoce el formato. Solo el repositorio puede distinguir "archivo dañado" de "no se pudo leer".
   - Deshacer el cambio con la técnica de "copiar y restaurar" cada objeto antes de modificarlo: más código en cada operación. Recargar desde el repositorio deja el sistema en el último estado guardado con una sola línea.
   - Una única excepción genérica con un código adentro: volvía a obligar al menú a interpretar códigos.
-- **Mejora pendiente:** si falla el guardado al registrar un estudiante nuevo, también se descarta el estudiante (es parte del mismo cambio); es el comportamiento buscado, pero el mensaje no lo aclara.
+- **Caso no cubierto (mejora pendiente):** el guardado falla y, además, el archivo fue borrado mientras el sistema estaba abierto. La recarga intenta recrearlo con los datos de ejemplo, vuelve a fallar y el programa termina con un error técnico. Se deja así por ser un caso extremo.
 
 ### S12 - Código muerto y comentarios desactualizados
 - **Qué viola:** las reglas de Clean Code de no dejar código muerto y de que los comentarios expliquen el "por qué" y sean verdaderos.
