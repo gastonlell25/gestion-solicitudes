@@ -17,11 +17,5 @@ class ArchivoJSON:
             return None
 
     def escribir(self, txt):
-        try:
-            f = open(self.ruta, "w", encoding="utf-8")
+        with open(self.ruta, "w", encoding="utf-8") as f:
             f.write(txt)
-            f.close()
-            return True
-        except Exception as e:
-            print("Error: " + str(e))
-            return False

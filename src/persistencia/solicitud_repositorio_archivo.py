@@ -7,7 +7,7 @@ from modelos.prioridad import Prioridad
 from modelos.responsable import Responsable
 from modelos.solicitud import Solicitud
 from persistencia.datos_sistema import DatosSistema
-from persistencia.solicitud_repositorio import SolicitudRepositorio
+from persistencia.solicitud_repositorio import PersistenciaException, SolicitudRepositorio
 
 
 class SolicitudRepositorioArchivo(SolicitudRepositorio):
@@ -66,7 +66,12 @@ class SolicitudRepositorioArchivo(SolicitudRepositorio):
             "solicitudes": datos.solicitudes
         }
         txt = json.dumps(data2, default=lambda o: o.__dict__, indent=2, ensure_ascii=False)
-        return self.archivo.escribir(txt + "\n")
+        try:
+            self.archivo.escribir(txt + "\n")
+        except OSError as e:
+            raise PersistenciaException(
+                "no se pudo guardar el archivo de datos " + str(self.archivo.ruta) + " (" + e.strerror + ")"
+            ) from e
 
     def datos_ejemplo(self):
         e = [

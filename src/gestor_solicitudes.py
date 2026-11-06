@@ -6,7 +6,7 @@ from modelos.estado import Estado, EstadoInvalidoException, TransicionInvalidaEx
 from modelos.tipo_solicitud import TipoSolicitud
 from modelos.prioridad import Prioridad
 from persistencia.datos_sistema import DatosSistema
-from persistencia.solicitud_repositorio import SolicitudRepositorio
+from persistencia.solicitud_repositorio import PersistenciaException, SolicitudRepositorio
 
 
 # Clase principal del sistema
@@ -20,7 +20,12 @@ class GestorSolicitudes:
         self.fin = False
 
     def iniciar(self):
-        self.cargar()
+        try:
+            self.cargar()
+        except PersistenciaException as e:
+            print("Error: " + str(e) + ".")
+            print("El sistema no puede iniciar sin sus datos.")
+            return
         flag = True
         while flag:
             self.mostrar_menu()
@@ -28,7 +33,12 @@ class GestorSolicitudes:
             if self.fin:
                 print("")
                 op = "0"
-            flag = self.procesar_opcion(op)
+            try:
+                flag = self.procesar_opcion(op)
+            except PersistenciaException as e:
+                print("Error: " + str(e) + ". La operacion no se guardo.")
+                # vuelve al ultimo estado guardado para no persistir despues un cambio que el usuario vio fallar
+                self.cargar()
             print("")
 
     def mostrar_menu(self):
@@ -167,9 +177,6 @@ class GestorSolicitudes:
         prioridad = self.leer_y_validar_prioridad(tipo)
         fecha = self.hoy()
         id = self.registrar_solicitud(legajo, nombre, apellido, email, carrera, tipo.value, descripcion, prioridad.value, fecha)
-        if id == -1:
-            print("Error: no se pudo guardar la solicitud.")
-            return
         self.mostrar_resultado_registro(id, legajo, apellido, nombre, tipo, prioridad, fecha)
 
     def leer_y_validar_legajo(self):
@@ -261,8 +268,7 @@ class GestorSolicitudes:
                 aux = self.lst[i].id
         s = Solicitud(aux + 1, est, tipo, descripcion, prioridad, "PENDIENTE", None, fecha, fecha)
         self.lst.append(s)
-        if not self.guardar():
-            return -1
+        self.guardar()
         return s.id
 
     # devuelve True si se pudo cambiar el estado
@@ -464,4 +470,4 @@ class GestorSolicitudes:
         self.lst = datos.solicitudes
 
     def guardar(self):
-        return self.repositorio.guardar(DatosSistema(self.ests, self.resp, self.lst))
+        self.repositorio.guardar(DatosSistema(self.ests, self.resp, self.lst))

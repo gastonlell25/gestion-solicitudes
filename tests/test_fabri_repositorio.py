@@ -25,9 +25,8 @@ class RepositorioEnMemoria(SolicitudRepositorio):
     def cargar(self) -> DatosSistema:
         return self.datos
 
-    def guardar(self, datos: DatosSistema) -> bool:
+    def guardar(self, datos: DatosSistema) -> None:
         self.guardados.append(datos)
-        return True
 
 
 def crear_datos() -> DatosSistema:
