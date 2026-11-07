@@ -53,6 +53,10 @@ Capturas sobre la versión final, diffs de los refactorings y tests en verde (Fa
 | [`despues_fabri_diff_extract-class-repositorio.png`](despues/despues_fabri_diff_extract-class-repositorio.png) | Fabri | Diff lado a lado: extract class repositorio |
 | [`despues_fabri_diff_introduce-interface.png`](despues/despues_fabri_diff_introduce-interface.png) | Fabri | Diff lado a lado: introduce interface |
 | [`despues_fabri_diff_remove-dead-code.png`](despues/despues_fabri_diff_remove-dead-code.png) | Fabri | Diff lado a lado: remove dead code |
+| [`despues_fabri_diff_excepciones-persistencia_resumen.png`](despues/despues_fabri_diff_excepciones-persistencia_resumen.png) | Fabri | Recorte del diff de las excepciones de persistencia para el informe PDF |
+| [`despues_fabri_diff_excepciones-propias_resumen.png`](despues/despues_fabri_diff_excepciones-propias_resumen.png) | Fabri | Recorte del diff de las excepciones propias para el informe PDF |
+| [`despues_fabri_diff_extract-class-repositorio_resumen.png`](despues/despues_fabri_diff_extract-class-repositorio_resumen.png) | Fabri | Recorte del diff de Extract Class del repositorio para el informe PDF |
+| [`despues_fabri_diff_remove-dead-code_resumen.png`](despues/despues_fabri_diff_remove-dead-code_resumen.png) | Fabri | Recorte del diff de Remove Dead Code para el informe PDF |
 | [`despues_fabri_guardado-fallido.png`](despues/despues_fabri_guardado-fallido.png) | Fabri | Guardado fallido |
 | [`despues_fabri_tests_codigo-muerto.png`](despues/despues_fabri_tests_codigo-muerto.png) | Fabri | Tests: código muerto |
 | [`despues_fabri_tests_excepciones.png`](despues/despues_fabri_tests_excepciones.png) | Fabri | Tests: excepciones |
