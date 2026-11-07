@@ -15,8 +15,8 @@ consultarlas y obtener un reporte resumido.
 ## Instalación y uso
 
 ```bash
-git clone <url-del-repositorio>
-cd tpi-gestion-solicitudes
+git clone https://github.com/gastonlell25/gestion-solicitudes.git
+cd gestion-solicitudes
 python3 src/main.py
 ```
 
@@ -83,16 +83,26 @@ Todos los datos de ejemplo son **ficticios**.
 
 ```
 src/
-  main.py                  punto de entrada
-  gestor_solicitudes.py    lógica principal del sistema
-  archivo_json.py          lectura/escritura del archivo de datos
+  main.py                          punto de entrada: arma las dependencias e inicia el menú
+  gestor_solicitudes.py            consola: menú, lectura de datos y mensajes al usuario
+  archivo_json.py                  lectura y escritura del archivo de texto
+  servicios/
+    solicitud_service.py           reglas de negocio: registrar, cambiar estado, asignar, filtrar
+    reporte_service.py             generación del reporte básico
+  persistencia/
+    solicitud_repositorio.py       interfaz SolicitudRepositorio y PersistenciaException
+    solicitud_repositorio_archivo.py  implementación sobre el archivo JSON
+    datos_sistema.py               datos que viajan entre el sistema y el repositorio
   modelos/
-    estudiante.py
-    responsable.py
-    solicitud.py
+    solicitud.py, estudiante.py, responsable.py
+    estado.py                      enum Estado con las transiciones permitidas
+    tipo_solicitud.py, prioridad.py
+    datos_solicitud.py             parámetros de registro agrupados (Introduce Parameter Object)
+    excepciones.py                 excepciones de reglas de negocio
+tests/                             tests de caracterización (T01–T19) y unitarios
 data/
-  solicitudes.json         datos persistidos
-docs/                      documentación del TPI
+  solicitudes.json                 datos persistidos (ficticios)
+docs/                              documentación del TPI (ver abajo)
 ```
 
 ## Pruebas
@@ -125,3 +135,50 @@ obtenido en cada versión) está en [`docs/pruebas.md`](docs/pruebas.md).
 - Python 3, solo librería estándar (`json`, `os`, `datetime`).
 - Persistencia en archivo JSON.
 - Pruebas: pytest (ver sección "Pruebas" arriba).
+
+## Documentación del TPI
+
+| Archivo | Contenido |
+|---|---|
+| [`docs/calidad-externa-interna.md`](docs/calidad-externa-interna.md) | Calidad externa vs. interna y costo de cambio (etapa 2) |
+| [`docs/diagnostico.md`](docs/diagnostico.md) | Los 12 code smells (S01–S12) con evidencia, impacto, riesgo y prioridad (etapa 3) |
+| [`docs/decisiones-tecnicas.md`](docs/decisiones-tecnicas.md) | SOLID y Clean Code: qué se decidió, alternativas y por qué (etapa 4) |
+| [`docs/refactorings.md`](docs/refactorings.md) | Una ficha por refactoring con código antes/después y commit (etapa 5) |
+| [`docs/juan/refactorings-S07-S09.md`](docs/juan/refactorings-S07-S09.md) · [`docs/juan/decisiones-S07-S09.md`](docs/juan/decisiones-S07-S09.md) | Fichas y decisiones de S07–S09 |
+| [`docs/pruebas.md`](docs/pruebas.md) | Casos de prueba T01–T19, verificación antes/después y bugs encontrados (etapa 6) |
+| [`docs/checklist-code-review.md`](docs/checklist-code-review.md) | Checklist de code review y criterios de aceptación (etapa 7) |
+| [`docs/code-review.md`](docs/code-review.md) | Resultados del code review y correcciones (etapa 7) |
+| [`docs/registro-ia.md`](docs/registro-ia.md) | Registro de uso de IA |
+| [`docs/contribucion.md`](docs/contribucion.md) | Participación de cada integrante (commits y PRs) |
+| [`docs/evidencias/`](docs/evidencias/README.md) | Capturas antes/después, tests, revisiones y análisis estático |
+
+## Etapas (tags)
+
+| Tag | Qué marca |
+|---|---|
+| `estado-inicial` | Versión inicial del sistema, antes de cualquier cambio |
+| `etapa-diagnostico` | Diagnóstico unificado de los 12 smells |
+| `etapa-refactoring` | Refactorings de los 4 integrantes integrados, suite en verde |
+| `etapa-pruebas` | Verificación antes/después sin regresiones |
+| `etapa-docs` | Documentación completa |
+| `estadorefactorizado` | Versión final entregada. Se escribe sin guion, como en el enunciado |
+
+## Video de defensa
+
+Pendiente: el enlace se agrega al publicar el video.
+
+## Integrantes
+
+| Integrante | Usuario de GitHub | Área del código | Rol transversal |
+|---|---|---|---|
+| Gastón Lell | `gastonlell25` | Registro de solicitudes y consola | Informe PDF |
+| Gabriel Lovera | `loveragabriel` | Estados, tipos y prioridades | Pruebas |
+| Juan Cruz Leal | `juansantafe7` | Filtros y reporte | Code review |
+| Adriel López (Fabri) | `fabri404` | Persistencia y manejo de errores | Repositorio |
+
+## Contribuir
+
+- Nadie commitea directo a `main`: todo entra por Pull Request con al menos una aprobación.
+- Ramas: `diag/<nombre>`, `test/<nombre>`, `refactor/<nombre>-<tecnica>`, `fix/review-<nombre>`, `docs/<tema>`.
+- Commits con prefijo (`docs:`, `test:`, `refactor:`, `fix:`, `chore:`), uno por paso, con la suite en verde.
+- Los PR usan la plantilla `.github/pull_request_template.md`.
