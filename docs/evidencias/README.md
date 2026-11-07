@@ -89,6 +89,7 @@ Revisiones de PR y correcciones del code review (Fase 5).
 
 | Archivo | Integrante | Qué muestra |
 |---|---|---|
+| [`fabri_cr-01-integracion-main.png`](review/fabri_cr-01-integracion-main.png) | Fabri | Antes/después de la corrección CR-01: integración del refactor de Fabri con el de Juan |
 | [`gaston_revisa_gabriel_estados_comentario.png.png`](review/gaston_revisa_gabriel_estados_comentario.png.png) | Gastón | Revisa estados comentario |
 
 ## `analisis/`
