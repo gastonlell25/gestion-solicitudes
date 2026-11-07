@@ -4,6 +4,7 @@ from modelos.solicitud import Solicitud
 from modelos.estado import Estado, EstadoInvalidoException, TransicionInvalidaException
 from modelos.tipo_solicitud import TipoSolicitud
 from modelos.prioridad import Prioridad
+from modelos.datos_solicitud import DatosSolicitud
 from modelos.excepciones import (
     OperacionRechazadaException,
     ResponsableNoEncontradoException,
@@ -34,20 +35,20 @@ class SolicitudService:
         """Persiste datos en el repositorio."""
         self.repositorio.guardar(DatosSistema(self.estudiantes, self.responsables, self.solicitudes))
 
-    def registrar_solicitud(self, legajo, nombre, apellido, email, carrera, tipo, descripcion, prioridad, fecha):
+    def registrar_solicitud(self, datos: DatosSolicitud):
         """Registra una nueva solicitud y devuelve su ID."""
         estudiante = None
         for i in range(len(self.estudiantes)):
-            if self.estudiantes[i].legajo == legajo:
+            if self.estudiantes[i].legajo == datos.legajo:
                 estudiante = self.estudiantes[i]
         if estudiante == None:
-            estudiante = Estudiante(legajo, nombre, apellido, email, carrera)
+            estudiante = Estudiante(datos.legajo, datos.nombre, datos.apellido, datos.email, datos.carrera)
             self.estudiantes.append(estudiante)
         proximo_id = 0
         for i in range(len(self.solicitudes)):
             if self.solicitudes[i].id > proximo_id:
                 proximo_id = self.solicitudes[i].id
-        solicitud = Solicitud(proximo_id + 1, estudiante, tipo, descripcion, prioridad, "PENDIENTE", None, fecha, fecha)
+        solicitud = Solicitud(proximo_id + 1, estudiante, datos.tipo, datos.descripcion, datos.prioridad, "PENDIENTE", None, datos.fecha, datos.fecha)
         self.solicitudes.append(solicitud)
         self.guardar()
         return solicitud.id
