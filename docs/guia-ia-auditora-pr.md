@@ -62,7 +62,6 @@ La IA guía al integrante por estas etapas, en orden. No se pasa a la siguiente 
 ### 6. Documentar
 - Ficha en `docs/refactorings.md` (o en la sección de ajustes de review).
 - Decisión en `docs/decisiones-tecnicas.md` si hubo alternativas descartadas.
-- Fila en `docs/registro-ia.md` **el mismo día**, con su PDF en `docs/evidencias/ia/`.
 
 ### 7. Auditar
 - La IA recorre la lista de la sección 4 y reporta cada punto como ✅ / ❌ / ⚠️.
@@ -96,7 +95,6 @@ Explicar en una oración por qué esa técnica respeta el principio.>
 - [ ] La suite completa de tests pasa en verde (<N>/<N>, incluye <tests nuevos>)
 - [ ] La salida por consola es igual a la versión anterior (<o: diferencia intencional documentada en ...>)
 - [ ] Ficha agregada en `docs/refactorings.md` (<sección>)
-- [ ] Uso de IA registrado en `docs/registro-ia.md` (<fecha y fila>)
 
 ## Evidencia
 <Resultado de pytest, capturas antes/después, links a archivos de docs/evidencias/.>
@@ -124,7 +122,6 @@ para no romper OCP.
 - [x] La salida por consola es igual a la versión anterior (mismos mensajes de error,
       ahora generados por dos excepciones distintas)
 - [x] Ficha agregada en docs/refactorings.md (sección "Ajustes de la revisión de PR")
-- [ ] Uso de IA registrado en docs/registro-ia.md (pendiente)
 
 ## Evidencia
 Suite completa en verde (75/75).
@@ -140,7 +137,6 @@ Suite completa en verde (75/75).
 | Tests | ✅ | Cantidad concreta y tests nuevos identificados. |
 | Salida por consola | ✅ | Explica por qué el mensaje es igual aunque cambió la excepción. |
 | Ficha | ✅ | Indica la sección. |
-| Registro IA | ❌ | **Bloqueante.** Debe registrarse el mismo día, con PDF en `docs/evidencias/ia/`. Hasta entonces el PR queda en *draft*. |
 | Evidencia | ⚠️ | Agregar la salida de `pytest` (captura o archivo en `docs/evidencias/tests/`), no solo el número. |
 
 ---
@@ -171,8 +167,7 @@ La IA lo recorre punto por punto y responde con ✅ / ❌ / ⚠️ y el motivo.
 ### Documentación y trazabilidad
 - [ ] Ficha en `docs/refactorings.md` con antes/después, principio, commit y resultado de tests.
 - [ ] `docs/decisiones-tecnicas.md` actualizado si se eligió entre alternativas.
-- [ ] Capturas antes/después en `docs/evidencias/` si cambia algo visible por consola.
-- [ ] Fila en `docs/registro-ia.md` + PDF de la conversación (CC-15).
+- [ ] Capturas antes/después en `docs/evidencias/` si cambia algo visible por consola (CC-15).
 
 ### Git
 - [ ] Rama con prefijo `feat/`, `fix/`, `refactor/` o `docs/`.

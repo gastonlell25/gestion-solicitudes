@@ -148,7 +148,6 @@ obtenido en cada versión) está en [`docs/pruebas.md`](docs/pruebas.md).
 | [`docs/pruebas.md`](docs/pruebas.md) | Casos de prueba T01–T19, verificación antes/después y bugs encontrados (etapa 6) |
 | [`docs/checklist-code-review.md`](docs/checklist-code-review.md) | Checklist de code review y criterios de aceptación (etapa 7) |
 | [`docs/code-review.md`](docs/code-review.md) | Resultados del code review y correcciones (etapa 7) |
-| [`docs/registro-ia.md`](docs/registro-ia.md) | Registro de uso de IA |
 | [`docs/contribucion.md`](docs/contribucion.md) | Participación de cada integrante (commits y PRs) |
 | [`docs/evidencias/`](docs/evidencias/README.md) | Capturas antes/después, tests, revisiones y análisis estático |
 

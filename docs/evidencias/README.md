@@ -102,16 +102,3 @@ Análisis estático (pylint).
 | [`antes_juan_pylint_instalacion.png`](analisis/antes_juan_pylint_instalacion.png) | Juan | Pylint instalación |
 | [`antes_juan_pylint_reporte.txt`](analisis/antes_juan_pylint_reporte.txt) | Juan | Pylint reporte |
 | [`antes_juan_pylint_version.txt`](analisis/antes_juan_pylint_version.txt) | Juan | Pylint versión |
-
-## `ia/`
-
-Conversaciones con IA exportadas a PDF (ver `docs/registro-ia.md`).
-
-| Archivo | Integrante | Qué muestra |
-|---|---|---|
-| [`2026-11-04_fabri_conversacion-ia.pdf`](ia/2026-11-04_fabri_conversacion-ia.pdf) | Fabri | Conversación con IA del 2026-11-04 |
-| [`2026-11-05_fabri_conversacion-ia.pdf`](ia/2026-11-05_fabri_conversacion-ia.pdf) | Fabri | Conversación con IA del 2026-11-05 |
-| [`2026-11-06_fabri_conversacion-ia.pdf`](ia/2026-11-06_fabri_conversacion-ia.pdf) | Fabri | Conversación con IA del 2026-11-06 |
-
-El detalle de cada evidencia (entrada usada, resultado y comparación) está en el `.md`
-de su etapa: `diagnostico.md`, `refactorings.md`, `pruebas.md` y `code-review.md`.
