@@ -89,6 +89,9 @@
   - Deshacer el cambio con la técnica de "copiar y restaurar" cada objeto antes de modificarlo: más código en cada operación. Recargar desde el repositorio deja el sistema en el último estado guardado con una sola línea.
   - Una única excepción genérica con un código adentro: volvía a obligar al menú a interpretar códigos.
 - **Caso no cubierto (mejora pendiente):** el guardado falla y, además, el archivo fue borrado mientras el sistema estaba abierto. La recarga intenta recrearlo con los datos de ejemplo, vuelve a fallar y el programa termina con un error técnico. Se deja así por ser un caso extremo.
+- **Límite conocido: la escritura no es atómica (observación CR-03 de Juan, Fase 5).** `ArchivoJSON.escribir()` abre el archivo en modo `"w"`, que lo vacía antes de escribir. Si el proceso se corta justo en ese momento (por ejemplo, se cierra la terminal o se llena el disco), el archivo puede quedar incompleto y en la próxima carga se informa como dañado. La corrección de S11 evita el mensaje de éxito falso, pero no esto.
+  - **Alternativa evaluada:** escribir en un archivo temporal de la misma carpeta y reemplazar el original con `os.replace()`, que es atómico.
+  - **Por qué no se aplicó ahora:** cambia el comportamiento con un archivo de solo lectura. `os.replace()` depende de los permisos de la carpeta y no de los del archivo, así que el guardado dejaría de fallar en el caso que cubre `test_si_no_se_puede_guardar_no_informa_exito_ni_conserva_el_cambio`. Para mantenerlo habría que agregar una verificación de permisos aparte. Como Juan pidió no cambiar el alcance sin una decisión del grupo, queda como **mejora pendiente** para las conclusiones (Apartado 10).
 
 ### S12 - Código muerto y comentarios desactualizados
 - **Qué viola:** las reglas de Clean Code de no dejar código muerto y de que los comentarios expliquen el "por qué" y sean verdaderos.

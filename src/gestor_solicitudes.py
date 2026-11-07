@@ -4,6 +4,7 @@ from servicios.reporte_service import ReporteService
 from modelos.estado import EstadoInvalidoException, TransicionInvalidaException
 from modelos.tipo_solicitud import TipoSolicitud
 from modelos.prioridad import Prioridad
+from modelos.datos_solicitud import DatosSolicitud
 from modelos.excepciones import (
     OperacionRechazadaException,
     ResponsableNoEncontradoException,
@@ -190,7 +191,8 @@ class GestorSolicitudes:
             return
         prioridad = self.leer_y_validar_prioridad(tipo)
         fecha = self.servicio._hoy()
-        id_solicitud = self.servicio.registrar_solicitud(legajo, nombre, apellido, email, carrera, tipo.value, descripcion, prioridad.value, fecha)
+        datos = DatosSolicitud(legajo, nombre, apellido, email, carrera, tipo.value, descripcion, prioridad.value, fecha)
+        id_solicitud = self.servicio.registrar_solicitud(datos)
         self.mostrar_resultado_registro(id_solicitud, legajo, apellido, nombre, tipo, prioridad, fecha)
 
     def leer_y_validar_legajo(self):

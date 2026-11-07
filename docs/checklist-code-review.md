@@ -24,7 +24,7 @@ La severidad es una referencia para clasificar observaciones, no implica que tod
 | CC-12 | Constantes | Plazos, estados y tipos no son literales ambiguos. | Valores del dominio identificables y cambios localizados. | Media |
 | CC-13 | Pruebas | Los casos de caracterización T01–T19 están documentados y aislados. | Tests repetibles con fecha fija y datos temporales; correspondencia con `docs/pruebas.md`. | Alta |
 | CC-14 | Pruebas | No hay regresiones tras los refactorings. | Suite completa ejecutada en el último commit integrado, 100 % aprobada; diferencias intencionales documentadas. | Alta |
-| CC-15 | Documentación | README, decisiones, refactorings, métricas y evidencias corresponden al código. | Enlaces válidos, fichas de cambios, capturas antes/después, registro IA y guía de ejecución. | Media |
+| CC-15 | Documentación | README, decisiones, refactorings, métricas y evidencias corresponden al código. | Enlaces válidos, fichas de cambios, capturas antes/después y guía de ejecución. | Media |
 | CC-16 | Git / revisión | PRs revisados y tags correspondientes a la versión real. | Revisión con al menos 2 comentarios técnicos reales en línea por PR según guion, respuestas y correcciones; tags en commits correctos. | Alta |
 
 ## Criterios de aceptación para cerrar la Fase 5

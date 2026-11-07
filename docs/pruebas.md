@@ -95,6 +95,27 @@ mejoras intencionales acordadas, no efectos secundarios no buscados del refactor
 
 **Comando para reproducir:** `python -m pytest tests/ -v`, desde la raíz del repo.
 
+### Comparación de capturas antes/después — Fabri
+
+Se repitieron sobre la versión final las capturas de la Fase 0, con **las mismas entradas**
+(`docs/evidencias/antes/entradas_fabri.md`), la misma fecha fija (`FECHA_HOY=2026-10-30`) y
+una copia nueva de `data/solicitudes.json`. Se comparó el texto completo de cada consola,
+no solo la imagen.
+
+| Qué se probó | Antes | Después | Resultado |
+|---|---|---|---|
+| Registrar una solicitud válida | `antes_fabri_registrar-valida.png` | `despues_fabri_registrar-valida.png` | Idéntica |
+| Registrar sin legajo y sin descripción | `antes_fabri_registrar-datos-faltantes.png` | `despues_fabri_registrar-datos-faltantes.png` | Idéntica |
+| Listar todas las solicitudes | `antes_fabri_listar-todas.png` | `despues_fabri_listar-todas.png` | Idéntica |
+| Asignar un responsable válido | `antes_fabri_asignar-responsable-valido.png` | `despues_fabri_asignar-responsable-valido.png` | Idéntica |
+| Asignar un responsable inexistente | `antes_fabri_asignar-responsable-inexistente.png` | `despues_fabri_asignar-responsable-inexistente.png` | Idéntica |
+| Persistencia entre dos sesiones | `antes_fabri_persistencia.png` | `despues_fabri_persistencia.png` | Idéntica |
+| Archivo de datos dañado | `antes_fabri_archivo-danado.png` | `despues_fabri_archivo-danado.png` | Mejora intencional (S11) |
+| Guardado fallido | `antes_fabri_guardado-fallido.png` | `despues_fabri_guardado-fallido.png` | Mejora intencional (S11) |
+
+Las seis operaciones normales dan exactamente la misma salida que en `estado-inicial`. Solo
+cambian los dos casos de error de la tabla de abajo, a propósito.
+
 ## Bugs del sistema base encontrados (Fabri, S11)
 
 Al diagnosticar S11 se encontraron dos bugs reales en `estado-inicial`. No los detectan T01–T19

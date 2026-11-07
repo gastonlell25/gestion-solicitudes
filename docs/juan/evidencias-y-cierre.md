@@ -33,6 +33,6 @@ Las capturas **después** se deben realizar realmente sobre el commit del PR. No
 - Apartado 8: T10–T15, tests del modelo y reporte, comparativa inicial/intermedia/final.
 - Apartado 9: checklist de 16 criterios, observaciones del área Fabri, comentarios reales de GitHub, respuestas y correcciones cuando existan.
 - Apartado 10: aprendizajes, límites y mejoras futuras, sin decir que el código quedó aceptado mientras existan hallazgos pendientes.
-- Anexo: registrar el uso de ChatGPT y exportar evidencia PDF conforme al acuerdo del equipo. El registro central de IA se consolida luego en `docs/registro-ia.md` para no pisar cambios de Fabri.
+- Anexo: registrar el uso de ChatGPT y exportar evidencia PDF conforme al acuerdo del equipo.
 
 **Nota de integración:** estas fichas se redactan como archivos propios de Juan, de forma deliberada. El equipo puede enlazarlas desde los documentos globales y unificar el informe al final, evitando conflictos con `docs/refactorings.md` y `docs/decisiones-tecnicas.md` de los PR de Fabri.
